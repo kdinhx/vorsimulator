@@ -1,762 +1,943 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AeroNav VOR / DME Cockpit Trainer & Flight Simulator</title>
+  <title>AeroNav Pro - VOR / HSI / DME Flight Trainer</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            avionics: {
-              bg: '#0c0f14',
-              panel: '#151922',
-              card: '#1c2230',
-              border: '#2a3447',
-              accent: '#38bdf8',
-              needle: '#f59e0b',
-              amber: '#fbbf24',
-              green: '#22c55e',
-              red: '#ef4444',
-              dme: '#fdba74'
+            cockpit: {
+              void: '#030711',
+              base: '#080d16',
+              surface: '#0d1522',
+              panel: '#111b2c',
+              card: '#162338',
+              border: '#1b2a41',
+              borderLight: '#263a59',
+              cyan: '#06b6d4',
+              cyanGlow: '#22d3ee',
+              amber: '#f59e0b',
+              amberGlow: '#fbbf24',
+              emerald: '#10b981',
+              emeraldGlow: '#34d399',
+              rose: '#f43f5e',
+              magenta: '#d946ef'
             }
           },
           fontFamily: {
             sans: ['Inter', 'sans-serif'],
             mono: ['JetBrains Mono', 'monospace'],
             gauge: ['Chakra Petch', 'sans-serif']
+          },
+          boxShadow: {
+            'glow-cyan': '0 0 12px rgba(6, 182, 212, 0.35)',
+            'glow-amber': '0 0 12px rgba(245, 158, 11, 0.35)',
+            'glow-emerald': '0 0 12px rgba(16, 185, 129, 0.35)',
+            'bezel-lg': 'inset 0 3px 6px rgba(255,255,255,0.12), inset 0 -8px 20px rgba(0,0,0,0.92), 0 10px 30px rgba(0,0,0,0.8)',
+            'knob': 'inset 0 1px 2px rgba(255,255,255,0.25), inset 0 -2px 5px rgba(0,0,0,0.7), 0 4px 10px rgba(0,0,0,0.5)'
           }
         }
       }
     };
   </script>
+
   <style>
-    /* Aviation display styling */
-    .led-display {
+    .led-compact {
       font-family: 'JetBrains Mono', monospace;
-      text-shadow: 0 0 8px rgba(251, 191, 36, 0.65);
+      color: #ff9d00;
+      text-shadow: 0 0 8px rgba(255, 157, 0, 0.75), 0 0 2px rgba(255, 220, 140, 0.95);
+      letter-spacing: 0.05em;
     }
-    .gauge-dial {
-      transition: transform 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
+    .cdi-needle-smooth {
+      transition: transform 0.05s linear;
     }
-    .cdi-needle {
-      transition: transform 0.1s linear;
+    .knob-knurled {
+      background: radial-gradient(circle at 35% 35%, #475569 0%, #1e293b 65%, #0f172a 100%);
     }
-    /* Custom scrollbars for avionics panels */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #0c0f14;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #2a3447;
-      border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #38bdf8;
-    }
-    .control-knob {
-      background: radial-gradient(circle at 35% 35%, #374151 0%, #111827 75%, #030712 100%);
-      box-shadow: inset 0 1px 2px rgba(255,255,255,0.2), 0 4px 6px rgba(0,0,0,0.5);
-    }
-    .noselect {
+    .user-select-none {
       user-select: none;
       -webkit-user-select: none;
     }
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1b2a41;
+      border-radius: 9999px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 12px;
+      width: 12px;
+      border-radius: 50%;
+      background: #38bdf8;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+    }
   </style>
 </head>
-<body class="bg-avionics-bg text-slate-200 min-h-screen flex flex-col font-sans selection:bg-sky-500 selection:text-white noselect">
 
-  <header class="bg-avionics-panel border-b border-avionics-border px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-md z-30">
-    <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400">
-        <i class="fa-solid fa-plane-departure text-lg"></i>
+<body class="bg-cockpit-void text-slate-200 h-screen w-screen overflow-hidden flex flex-col font-sans user-select-none antialiased">
+
+  <!-- Slim Header (40px fixed) -->
+  <header class="h-10 bg-cockpit-surface border-b border-cockpit-border px-3 flex items-center justify-between gap-2 shrink-0 z-30 shadow-md">
+    <div class="flex items-center space-x-2">
+      <div class="w-6 h-6 rounded-md bg-cockpit-cyan/15 border border-cockpit-cyan/40 flex items-center justify-center text-cockpit-cyan">
+        <i data-lucide="plane" class="w-3.5 h-3.5"></i>
       </div>
-      <div>
-        <h1 class="text-lg font-bold tracking-wider font-gauge text-slate-100 flex items-center gap-2">
-          AERONAV <span class="text-xs px-2 py-0.5 rounded bg-sky-950 text-sky-400 border border-sky-800 font-mono">VOR-DME SIM</span>
-        </h1>
-        <p class="text-xs text-slate-400">Radial Navigation & IFR Intercept Laboratory</p>
-      </div>
+      <h1 class="text-xs sm:text-sm font-bold tracking-wider font-gauge text-slate-100 uppercase">
+        AERODECK <span class="font-mono text-[9px] text-cockpit-cyan bg-cockpit-cyan/10 px-1 py-0.5 rounded border border-cockpit-cyan/30">VOR / HSI / DME</span>
+      </h1>
     </div>
 
-    <!-- Mode Selector Tabs -->
-    <div class="flex items-center bg-avionics-bg border border-avionics-border rounded-lg p-1 text-xs font-semibold">
-      <button id="btn-mode-explore" onclick="switchMode('explore')" class="px-3 py-1.5 rounded-md bg-sky-600 text-white shadow transition-all flex items-center gap-1.5">
-        <i class="fa-solid fa-compass"></i> Free Flight
-      </button>
-      <button id="btn-mode-quiz" onclick="switchMode('quiz')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
-        <i class="fa-solid fa-crosshairs"></i> Radial Quiz
-      </button>
-      <button id="btn-mode-guide" onclick="switchMode('guide')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
-        <i class="fa-solid fa-book-open"></i> Theory & Rules
+    <!-- Center Station & Audio Ident -->
+    <div class="flex items-center space-x-2">
+      <div class="flex items-center bg-cockpit-base border border-cockpit-border rounded px-2 py-0.5 text-slate-300 font-mono text-[11px]">
+        <span class="text-[9px] text-slate-400 mr-1 hidden sm:inline uppercase">NAV:</span>
+        <select id="select-vor-station" onchange="onStationSelect(this.value)" class="bg-transparent text-cockpit-amber font-bold focus:outline-none cursor-pointer text-xs">
+          <option value="MCN" class="bg-slate-900 text-amber-400">MCN 114.20 • Macon</option>
+          <option value="ATL" class="bg-slate-900 text-amber-400">ATL 116.90 • Atlanta</option>
+          <option value="JAX" class="bg-slate-900 text-amber-400">JAX 114.50 • Craig</option>
+        </select>
+      </div>
+
+      <button id="btn-audio-ident" onclick="toggleMorseAudio()" class="px-2 py-0.5 rounded bg-cockpit-base border border-cockpit-border hover:border-cockpit-borderLight text-slate-300 transition flex items-center gap-1 text-[10px] font-mono font-semibold" title="Toggle 1020 Hz FAA Morse ident">
+        <i data-lucide="volume-x" class="w-3 h-3 text-slate-400" id="audio-icon"></i>
+        <span id="audio-ident-label" class="hidden sm:inline">IDENT</span>
       </button>
     </div>
 
-    <!-- Audio & Station Status -->
-    <div class="flex items-center space-x-2 text-xs">
-      <div class="flex items-center bg-avionics-card border border-avionics-border rounded-md px-2.5 py-1.5 font-mono text-slate-300">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
-        <span class="font-bold text-amber-400 mr-1.5" id="station-ident-badge">MCN</span>
-        <span class="text-slate-400 mr-2">114.20 MHz</span>
-        <button id="btn-audio-morse" onclick="toggleMorseAudio()" title="Toggle VOR Ident Audio (Morse Code)" class="px-2 py-0.5 rounded bg-avionics-border hover:bg-slate-700 text-slate-200 text-xs transition">
-          <i class="fa-solid fa-volume-xmark mr-1" id="audio-icon"></i> <span id="audio-status-text">IDENT</span>
-        </button>
-      </div>
+    <!-- Sim Engine Controls -->
+    <div class="flex items-center space-x-1.5">
+      <button id="btn-sim-play" onclick="toggleSimFlight()" class="px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow-glow-emerald transition flex items-center gap-1">
+        <i data-lucide="play" class="w-3 h-3" id="sim-play-icon"></i>
+        <span id="sim-play-text">Engage</span>
+      </button>
+
+      <button id="btn-sim-speed" onclick="cycleSimSpeed()" class="px-1.5 py-0.5 rounded bg-cockpit-base hover:bg-slate-800 text-cockpit-cyan font-mono text-[10px] font-bold border border-cockpit-border transition">
+        1X
+      </button>
+
+      <button onclick="resetAircraftPosition()" class="px-2 py-0.5 rounded bg-cockpit-base hover:bg-slate-800 text-slate-300 border border-cockpit-border transition text-[10px] font-semibold flex items-center gap-1">
+        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+        <span class="hidden sm:inline">Reset</span>
+      </button>
     </div>
   </header>
 
-  <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 overflow-hidden">
-    
-    <!-- LEFT & CENTER: Navigation Airspace Map & Overlay (7 cols) -->
-    <section class="lg:col-span-7 flex flex-col bg-avionics-panel border border-avionics-border rounded-xl shadow-lg overflow-hidden relative min-h-[480px]">
-      <!-- Map Top Toolbar -->
-      <div class="px-3 py-2 bg-avionics-card/80 border-b border-avionics-border flex flex-wrap items-center justify-between text-xs gap-2 z-10 backdrop-blur">
-        <div class="flex items-center space-x-2">
-          <span class="font-semibold text-slate-300 flex items-center gap-1">
-            <i class="fa-solid fa-satellite-dish text-sky-400"></i> Radar Airspace (30 NM Scope)
-          </span>
-          <span class="text-slate-500">|</span>
-          <span class="text-slate-400">Drag airplane or station to position</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <button onclick="toggleSectors()" id="btn-toggle-sectors" class="px-2 py-1 rounded bg-avionics-border text-slate-300 hover:text-white hover:bg-slate-700 transition" title="Show TO / FROM quadrants based on selected OBS">
-            <i class="fa-regular fa-chart-pie mr-1"></i> Quadrants
-          </button>
-          <button onclick="toggleTrails()" id="btn-toggle-trails" class="px-2 py-1 rounded bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition" title="Toggle flight path trail">
-            <i class="fa-solid fa-route mr-1"></i> Trail: ON
-          </button>
-          <button onclick="resetAircraftPosition()" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition" title="Reset plane to 10 NM West">
-            <i class="fa-solid fa-rotate-right mr-1"></i> Reset Plane
-          </button>
-        </div>
-      </div>
+  <!-- Main Viewport (Zero Scroll, Responsive 12-column grid) -->
+  <main class="flex-1 w-full p-2 grid grid-cols-1 lg:grid-cols-12 gap-2 overflow-hidden min-h-0">
 
-      <!-- Canvas Airspace Container -->
-      <div class="flex-1 relative w-full h-full bg-[#07090e] cursor-crosshair overflow-hidden" id="canvas-container">
-        <canvas id="airspaceCanvas" class="w-full h-full block"></canvas>
+    <!-- LEFT COLUMN: Maximized Instruments & Flight Controls (6 cols on lg for big gauges) -->
+    <section class="lg:col-span-6 h-full flex flex-col justify-between gap-1.5 overflow-hidden min-h-0">
+
+      <!-- 1. EXPANDED PRIMARY INSTRUMENT PANEL (VOR / HSI) -->
+      <div class="bg-cockpit-panel border border-cockpit-border rounded-xl p-2 shadow-lg relative flex flex-col justify-between flex-1 min-h-0">
         
-        <!-- Interactive Tooltip Overlay -->
-        <div id="map-telemetry" class="absolute bottom-3 left-3 bg-avionics-panel/90 border border-avionics-border rounded-lg p-2.5 text-xs font-mono shadow-xl backdrop-blur-md pointer-events-none">
-          <div class="text-sky-400 font-bold mb-1">AIRCRAFT TELEMETRY</div>
-          <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-slate-300">
-            <span>Current Radial: <b class="text-amber-400" id="tele-radial">---°</b></span>
-            <span>Bearing to VOR: <b class="text-emerald-400" id="tele-bearing">---°</b></span>
-            <span>Distance (Slant): <b class="text-slate-100" id="tele-dist">--.- NM</b></span>
-            <span>Altitude: <b class="text-slate-100" id="tele-alt">3,500 FT</b></span>
-            <span>Heading: <b class="text-slate-100" id="tele-hdg">360°</b></span>
-            <span>Groundspeed: <b class="text-slate-100" id="tele-speed">120 KT</b></span>
-          </div>
-        </div>
-
-        <!-- Reverse Sensing Alert Pill -->
-        <div id="reverse-sensing-badge" class="hidden absolute top-4 left-1/2 -translate-x-1/2 bg-amber-950/90 border border-amber-500/80 text-amber-200 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg backdrop-blur flex items-center gap-2 animate-bounce pointer-events-none">
-          <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm"></i>
-          <span>REVERSE SENSING ACTIVE! Needle responds inversely to heading.</span>
-        </div>
-
-        <!-- Quiz Mask (Hides plane on map during challenge) -->
-        <div id="quiz-hidden-overlay" class="hidden absolute inset-0 bg-[#0c1018]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center z-20">
-          <div class="w-16 h-16 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center text-amber-400 mb-4 animate-pulse">
-            <i class="fa-solid fa-radar text-2xl"></i>
-          </div>
-          <h2 class="text-xl font-bold font-gauge text-slate-100 mb-2">AIRCRAFT POSITION HIDDEN</h2>
-          <p class="text-sm text-slate-300 max-w-md mb-5 leading-relaxed">
-            Examine your cockpit instruments on the right (VOR CDI needle, TO/FROM flag, and DME distance) to determine your exact radial and station position.
-          </p>
-          <div class="flex gap-3">
-            <button onclick="revealAircraftSolution()" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-600 transition">
-              <i class="fa-regular fa-eye mr-2"></i> Reveal on Map
+        <!-- Mode Switcher Header Bar -->
+        <div class="flex items-center justify-between border-b border-cockpit-border/80 pb-1 shrink-0">
+          <div class="flex items-center bg-cockpit-surface border border-cockpit-border rounded-lg p-0.5 text-[11px] font-gauge font-bold">
+            <button id="tab-btn-vor" onclick="switchInstrumentMode('vor')" class="px-3 py-1 rounded bg-cockpit-cyan text-slate-950 shadow transition flex items-center gap-1.5">
+              <i data-lucide="compass" class="w-3.5 h-3.5"></i> VOR / CDI
+            </button>
+            <button id="tab-btn-hsi" onclick="switchInstrumentMode('hsi')" class="px-3 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> HSI (MODERN)
             </button>
           </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- RIGHT: Cockpit Avionics Stack & Flight Controls (5 cols) -->
-    <section class="lg:col-span-5 flex flex-col gap-3 overflow-y-auto pr-0.5">
-      
-      <div class="bg-avionics-panel border border-avionics-border rounded-xl p-4 shadow-lg relative">
-        <div class="flex items-center justify-between border-b border-avionics-border pb-2 mb-3">
-          <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-circle-notch text-amber-400"></i>
-            <h2 class="font-bold text-sm tracking-wide text-slate-100 font-gauge">NAV 1: VOR / LOC INDICATOR</h2>
-          </div>
-          <div class="flex items-center space-x-1.5 text-xs font-mono">
-            <span class="text-slate-400">OBS:</span>
-            <span class="bg-black/60 border border-slate-700 px-2 py-0.5 rounded text-amber-400 font-bold text-sm" id="obs-digital-readout">000°</span>
+          <div class="flex items-center space-x-2 text-xs font-mono">
+            <div id="panel-readout-crs" class="flex items-center gap-1">
+              <span class="text-[10px] text-slate-400">CRS:</span>
+              <span class="bg-cockpit-void border border-cockpit-border px-1.5 py-0.5 rounded text-cockpit-amber font-bold text-xs" id="obs-readout">270°</span>
+            </div>
+            <div id="panel-readout-hdg" class="hidden flex items-center gap-1">
+              <span class="text-[10px] text-slate-400">HDG:</span>
+              <span class="bg-cockpit-void border border-cockpit-border px-1.5 py-0.5 rounded text-cockpit-cyan font-bold text-xs" id="hsi-hdg-readout">270°</span>
+            </div>
           </div>
         </div>
 
-        <!-- Gauge Instrument Layout -->
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-          
-          <!-- Realistic VOR Circular Gauge Instrument -->
-          <div class="relative w-56 h-56 rounded-full bg-slate-950 border-4 border-slate-800 shadow-[inset_0_4px_10px_rgba(0,0,0,0.8),0_10px_20px_rgba(0,0,0,0.6)] flex items-center justify-center select-none overflow-hidden" id="vor-bezel">
-            
-            <!-- Instrument Bezel Screws -->
-            <div class="absolute top-2 left-2 w-2 h-2 rounded-full bg-slate-700 border border-slate-900"></div>
-            <div class="absolute top-2 right-2 w-2 h-2 rounded-full bg-slate-700 border border-slate-900"></div>
-            <div class="absolute bottom-2 left-2 w-2 h-2 rounded-full bg-slate-700 border border-slate-900"></div>
-            <div class="absolute bottom-2 right-2 w-2 h-2 rounded-full bg-slate-700 border border-slate-900"></div>
+        <!-- =================== VIEW A: LARGE TRADITIONAL VOR / CDI =================== -->
+        <div id="instrument-view-vor" class="flex items-center justify-center gap-4 sm:gap-6 flex-1 py-1 min-h-0">
+          <!-- Large Circular VOR Bezel -->
+          <div class="relative w-52 h-52 sm:w-64 sm:h-64 xl:w-[270px] xl:h-[270px] aspect-square rounded-full bg-cockpit-void border-[6px] border-slate-800 shadow-bezel-lg flex items-center justify-center select-none shrink-0">
+            <div class="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.06] z-30"></div>
 
-            <!-- Rotating Compass Azimuth Card -->
-            <svg id="vor-azimuth-card" class="absolute w-full h-full gauge-dial" viewBox="0 0 200 200">
-              <!-- Azimuth Ring Generator injected via JS -->
-              <g id="azimuth-card-ticks"></g>
+            <!-- Compass Card SVG (280x280) -->
+            <svg id="vor-compass-svg" class="absolute w-full h-full" viewBox="0 0 280 280">
+              <g id="vor-card-rotator">
+                <circle cx="140" cy="140" r="136" fill="#090d16" stroke="#1e293b" stroke-width="2"/>
+                <g id="vor-ticks-group"></g>
+              </g>
+              <g id="vor-upright-labels-group"></g>
             </svg>
 
-            <!-- Fixed Internal Instrument Face (CDI Scale, Dots, Glideslope reference) -->
-            <div class="absolute w-36 h-36 rounded-full flex flex-col items-center justify-center pointer-events-none">
-              
-              <!-- TO / FROM / NAV FLAG Window -->
-              <div class="absolute top-9 w-14 h-6 bg-slate-900/90 border border-slate-700 rounded flex items-center justify-center overflow-hidden shadow-inner">
-                <span id="vor-flag" class="font-gauge font-bold text-xs tracking-wider text-emerald-400 transition-all">
+            <!-- Center Dial Face -->
+            <div class="absolute w-44 h-44 sm:w-52 sm:h-52 rounded-full flex flex-col items-center justify-center pointer-events-none z-10">
+              <!-- TO / FROM / NAV OFF Flag Display -->
+              <div class="absolute top-7 w-16 h-6 bg-cockpit-void border border-slate-700/80 rounded flex items-center justify-center shadow-inner overflow-hidden">
+                <span id="vor-flag-indicator" class="font-gauge font-bold text-xs tracking-wider text-cockpit-emerald">
                   TO
                 </span>
               </div>
 
-              <!-- CDI Deviation Scale: 5 Dots Left & Right (10 degrees full scale = 2° per dot) -->
-              <div class="w-full flex items-center justify-center space-x-2 text-slate-500 py-1">
-                <span class="w-1.5 h-1.5 rounded-full border border-slate-400 bg-transparent"></span>
-                <span class="w-1.5 h-1.5 rounded-full border border-slate-400 bg-transparent"></span>
-                <span class="w-2.5 h-2.5 rounded-full border-2 border-slate-300 bg-transparent"></span> <!-- Center doughnut -->
-                <span class="w-1.5 h-1.5 rounded-full border border-slate-400 bg-transparent"></span>
-                <span class="w-1.5 h-1.5 rounded-full border border-slate-400 bg-transparent"></span>
+              <!-- 5-Dot CDI Deviation Scale (±10° full deflection) -->
+              <div class="w-full flex items-center justify-center space-x-2 text-slate-400 py-1">
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-3.5 h-3.5 rounded-full border-2 border-slate-300 bg-transparent"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
+                <span class="w-2 h-2 rounded-full border border-slate-400 bg-slate-800"></span>
               </div>
 
               <!-- Moving Vertical CDI Needle -->
-              <div id="cdi-needle-container" class="absolute inset-0 flex items-center justify-center pointer-events-none cdi-needle">
-                <div class="w-1 h-32 bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.8)] rounded-full"></div>
+              <div id="vor-needle-wrapper" class="absolute inset-0 flex items-center justify-center cdi-needle-smooth">
+                <div class="w-1 h-44 sm:h-52 bg-cockpit-amber shadow-[0_0_10px_rgba(245,158,11,1)] rounded-full"></div>
               </div>
 
-              <!-- Miniature fixed aircraft center index -->
-              <div class="w-3 h-3 rounded-full border-2 border-sky-400 z-10 bg-slate-950/70"></div>
+              <div class="w-3 h-3 rounded-full border-2 border-cockpit-cyan bg-slate-900 z-20 shadow-glow-cyan"></div>
             </div>
 
-            <!-- Top Index / Lubber line (Yellow pointer at top) -->
-            <div class="absolute top-0 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[10px] border-t-amber-400 z-20"></div>
-            <div class="absolute bottom-0 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[8px] border-b-slate-400 z-20"></div>
+            <!-- Top Lubber Line Index -->
+            <div class="absolute top-0.5 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[12px] border-t-cockpit-amber z-20"></div>
+            <div class="absolute bottom-0.5 w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-b-[9px] border-b-slate-400 z-20"></div>
           </div>
 
-          <!-- OBS Control Knob & Quick Set buttons -->
-          <div class="flex flex-col items-center justify-between space-y-3">
-            <div class="text-center">
-              <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest block mb-1">OBS Knob</span>
-              <div class="flex items-center space-x-2">
-                <button onclick="adjustOBS(-5)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-600 flex items-center justify-center shadow" title="-5°">
-                  <i class="fa-solid fa-angle-left"></i>
-                </button>
-                <div class="w-12 h-12 rounded-full control-knob border-2 border-slate-600 flex items-center justify-center cursor-ew-resize group" id="obs-knob-visual" title="Click & drag or use buttons to rotate OBS">
-                  <div class="w-1.5 h-5 bg-amber-400 rounded-full group-hover:bg-amber-300"></div>
+          <!-- OBS Controls Side Panel -->
+          <div class="flex flex-col items-center justify-center space-y-2.5 shrink-0">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">OBS Course</span>
+            
+            <div class="flex items-center space-x-1.5">
+              <button onclick="stepOBS(-5)" class="px-2 py-1 rounded bg-cockpit-card hover:bg-slate-700 active:scale-95 text-slate-300 border border-cockpit-border text-[11px] font-mono font-bold transition">-5°</button>
+              
+              <!-- Knurled OBS Knob -->
+              <div id="obs-knob-element" class="w-11 h-11 rounded-full knob-knurled border-2 border-slate-600 flex items-center justify-center cursor-ew-resize active:border-cockpit-amber transition-colors group shadow-knob" title="Drag left/right or scroll to adjust course">
+                <div class="w-1.5 h-5 bg-cockpit-amber rounded-full group-hover:bg-amber-300 transition shadow"></div>
+              </div>
+
+              <button onclick="stepOBS(5)" class="px-2 py-1 rounded bg-cockpit-card hover:bg-slate-700 active:scale-95 text-slate-300 border border-cockpit-border text-[11px] font-mono font-bold transition">+5°</button>
+            </div>
+
+            <!-- Alignment Buttons -->
+            <div class="flex flex-col gap-1.5 w-full pt-1">
+              <button onclick="centerCourseTO()" class="px-2.5 py-1.5 text-[10px] rounded bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 font-semibold transition flex items-center justify-center gap-1 shadow">
+                <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Center TO
+              </button>
+              <button onclick="setRadialFROM()" class="px-2.5 py-1.5 text-[10px] rounded bg-amber-950/60 hover:bg-amber-900/80 border border-amber-700/60 text-amber-300 font-semibold transition flex items-center justify-center gap-1 shadow">
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i> Radial FROM
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- =================== VIEW B: LARGE MODERN HSI =================== -->
+        <div id="instrument-view-hsi" class="hidden flex items-center justify-center gap-4 sm:gap-6 flex-1 py-1 min-h-0">
+          <!-- Large HSI Bezel -->
+          <div class="relative w-52 h-52 sm:w-64 sm:h-64 xl:w-[270px] xl:h-[270px] aspect-square rounded-full bg-cockpit-void border-[6px] border-slate-800 shadow-bezel-lg flex items-center justify-center select-none shrink-0" id="hsi-gauge-bezel">
+            <div class="absolute inset-0 rounded-full pointer-events-none bg-gradient-to-tr from-transparent via-white/[0.02] to-white/[0.06] z-30"></div>
+
+            <!-- HSI Compass Card SVG (280x280) -->
+            <svg id="hsi-compass-svg" class="absolute w-full h-full" viewBox="0 0 280 280">
+              <g id="hsi-heading-rotator">
+                <circle cx="140" cy="140" r="136" fill="#090d16" stroke="#1e293b" stroke-width="2"/>
+                <g id="hsi-ticks-group"></g>
+
+                <!-- Heading Bug -->
+                <g id="hsi-heading-bug">
+                  <path d="M 134 5 L 140 14 L 146 5 Z" fill="#06b6d4" stroke="#ffffff" stroke-width="1"/>
+                  <path d="M 130 4 L 130 9 L 134 9" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+                  <path d="M 150 4 L 150 9 L 146 9" stroke="#06b6d4" stroke-width="1.5" fill="none"/>
+                </g>
+
+                <!-- Course Pointer Assembly (Rotates with CRS) -->
+                <g id="hsi-course-assembly">
+                  <!-- Course Arrow Head (Green) -->
+                  <path d="M 140 24 L 133 48 L 138 48 L 138 72 L 142 72 L 142 48 L 147 48 Z" fill="#10b981" stroke="#34d399" stroke-width="1"/>
+                  <!-- Reciprocal Tail -->
+                  <rect x="138" y="206" width="4" height="46" fill="#10b981" stroke="#34d399" stroke-width="0.5"/>
+                  <path d="M 131 252 L 149 252" stroke="#10b981" stroke-width="2.5"/>
+
+                  <!-- Expanded Track Guides & Dots Scale: 2 dots each side at ±18px and ±36px (5° per dot / 2.5° per dot reference) -->
+                  <!-- Guide lines show the track slot where the bar can travel freely beyond dot 2 (out to ±55px) -->
+                  <line x1="82" y1="140" x2="198" y2="140" stroke="#1e293b" stroke-width="2" stroke-linecap="round"/>
+
+                  <!-- Standard 2-Dot Scales (Left: 104, 122 | Right: 158, 176) -->
+                  <g stroke="#94a3b8" fill="#0f172a" stroke-width="1.5">
+                    <!-- Dot 2 Left (104, 140) -->
+                    <circle cx="104" cy="140" r="3.2"/>
+                    <!-- Dot 1 Left (122, 140) -->
+                    <circle cx="122" cy="140" r="3.2"/>
+                    <!-- Dot 1 Right (158, 140) -->
+                    <circle cx="158" cy="140" r="3.2"/>
+                    <!-- Dot 2 Right (176, 140) -->
+                    <circle cx="176" cy="140" r="3.2"/>
+                  </g>
+
+                  <!-- TO / FROM Triangle Indicator (Green / Amber) -->
+                  <g id="hsi-to-from-flag">
+                    <polygon id="hsi-to-tri" points="140,110 134,125 146,125" fill="#10b981" stroke="#059669" stroke-width="1"/>
+                    <polygon id="hsi-from-tri" points="140,170 134,155 146,155" fill="#f59e0b" stroke="#d97706" stroke-width="1" class="hidden"/>
+                  </g>
+
+                  <!-- Lateral CDI Deviation Bar (Moves across and out beyond the 2nd dot, up to ±54px) -->
+                  <g id="hsi-deviation-bar" class="cdi-needle-smooth">
+                    <rect x="138" y="74" width="4" height="130" rx="2" fill="#fbbf24" stroke="#d97706" stroke-width="0.8" filter="drop-shadow(0 0 5px rgba(251,191,36,0.85))"/>
+                  </g>
+                </g>
+              </g>
+
+              <!-- Dynamic Upright Compass Numbers on HSI -->
+              <g id="hsi-upright-labels-group"></g>
+            </svg>
+
+            <!-- Fixed Center Aircraft Symbol -->
+            <div class="absolute w-14 h-14 flex items-center justify-center pointer-events-none z-20">
+              <svg viewBox="0 0 40 40" class="w-10 h-10 filter drop-shadow-[0_0_5px_rgba(255,255,255,0.7)]">
+                <path d="M 20 6 L 22 15 L 34 21 L 34 24 L 22 21 L 22 29 L 26 32 L 26 34 L 20 32 L 14 34 L 14 32 L 18 29 L 18 21 L 6 24 L 6 21 L 18 15 Z" fill="#ffffff" stroke="#38bdf8" stroke-width="1"/>
+                <circle cx="20" cy="20" r="2.5" fill="#f59e0b"/>
+              </svg>
+            </div>
+
+            <!-- Fixed Lubber Line -->
+            <div class="absolute top-0.5 w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-t-[12px] border-t-white z-20"></div>
+          </div>
+
+          <!-- Dual Knobs for HSI -->
+          <div class="flex flex-col items-center justify-center space-y-2.5 shrink-0">
+            <!-- CRS Adjustment -->
+            <div class="flex flex-col items-center">
+              <div class="flex items-center justify-between w-full text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                <span>CRS</span>
+                <span class="text-cockpit-emerald font-mono" id="hsi-crs-indicator">270°</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <button onclick="stepOBS(-5)" class="px-1.5 py-1 rounded bg-cockpit-card hover:bg-slate-700 text-slate-300 border border-cockpit-border text-[10px] font-mono font-bold transition">-5°</button>
+                <div id="hsi-crs-knob" class="w-9 h-9 rounded-full knob-knurled border-2 border-emerald-600 flex items-center justify-center cursor-ew-resize shadow-knob" title="Drag left/right to adjust Course">
+                  <div class="w-1.5 h-4 bg-cockpit-emerald rounded-full"></div>
                 </div>
-                <button onclick="adjustOBS(5)" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border border-slate-600 flex items-center justify-center shadow" title="+5°">
-                  <i class="fa-solid fa-angle-right"></i>
-                </button>
+                <button onclick="stepOBS(5)" class="px-1.5 py-1 rounded bg-cockpit-card hover:bg-slate-700 text-slate-300 border border-cockpit-border text-[10px] font-mono font-bold transition">+5°</button>
               </div>
             </div>
 
-            <!-- Radial Direct Centering Tools -->
-            <div class="flex flex-col gap-1.5 w-full">
-              <button onclick="centerCDItoDirectCourse()" class="px-2.5 py-1 text-xs rounded bg-sky-900/60 hover:bg-sky-800 border border-sky-600/60 text-sky-200 transition font-medium flex items-center justify-center gap-1">
-                <i class="fa-solid fa-bullseye"></i> Center (Direct TO)
-              </button>
-              <button onclick="setOBSToCurrentRadial()" class="px-2.5 py-1 text-xs rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-300 transition font-medium flex items-center justify-center gap-1">
-                <i class="fa-solid fa-location-arrow"></i> Set Current Radial (FROM)
-              </button>
+            <!-- HDG Bug Adjustment -->
+            <div class="flex flex-col items-center">
+              <div class="flex items-center justify-between w-full text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                <span>HDG BUG</span>
+                <span class="text-cockpit-cyan font-mono" id="hsi-bug-indicator">270°</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <button onclick="stepHeadingBug(-5)" class="px-1.5 py-1 rounded bg-cockpit-card hover:bg-slate-700 text-slate-300 border border-cockpit-border text-[10px] font-mono font-bold transition">-5°</button>
+                <div id="hsi-hdg-knob" class="w-9 h-9 rounded-full knob-knurled border-2 border-cyan-600 flex items-center justify-center cursor-ew-resize shadow-knob" title="Drag left/right to set Heading Bug">
+                  <div class="w-1.5 h-4 bg-cockpit-cyan rounded-full"></div>
+                </div>
+                <button onclick="stepHeadingBug(5)" class="px-1.5 py-1 rounded bg-cockpit-card hover:bg-slate-700 text-slate-300 border border-cockpit-border text-[10px] font-mono font-bold transition">+5°</button>
+              </div>
             </div>
+
+            <!-- Sync Bug Button -->
+            <button onclick="syncHeadingBugToCurrent()" class="w-full px-2 py-1 text-[10px] rounded bg-cyan-950/60 hover:bg-cyan-900/80 border border-cyan-700/60 text-cyan-300 font-semibold transition flex items-center justify-center gap-1 shadow">
+              <i data-lucide="crosshair" class="w-3 h-3"></i> Sync HDG Bug
+            </button>
           </div>
         </div>
 
-        <!-- Deflection Readout & Status -->
-        <div class="mt-3 pt-2.5 border-t border-avionics-border/60 flex items-center justify-between text-xs text-slate-400">
-          <div>
-            Needle: <span id="cdi-degrees-text" class="text-slate-200 font-mono font-semibold">Centered (0.0°)</span>
+        <!-- Status Banner Strip -->
+        <div class="border-t border-cockpit-border/80 pt-1 flex items-center justify-between text-[10px] font-mono shrink-0">
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Steer:</span>
+            <span id="txt-steering-banner" class="text-cockpit-emerald font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-cockpit-border">ON COURSE</span>
           </div>
-          <div>
-            Sense: <span id="sensing-direction-text" class="text-emerald-400 font-semibold font-mono">Normal Sensing</span>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Dev:</span>
+            <span id="txt-needle-deflection-val" class="text-slate-200 font-bold">0.0°</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400">Status:</span>
+            <span id="badge-reverse-sensing" class="text-emerald-400 font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-cockpit-border">NORMAL</span>
           </div>
         </div>
       </div>
 
-      <div class="bg-avionics-panel border border-avionics-border rounded-xl p-3 shadow-lg">
-        <div class="flex items-center justify-between border-b border-avionics-border pb-1.5 mb-2">
-          <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-tower-broadcast text-orange-400"></i>
-            <h2 class="font-bold text-xs tracking-wider text-slate-100 font-gauge">KN 62A DME RECEIVER</h2>
-          </div>
-          <span class="text-[10px] px-1.5 py-0.5 rounded bg-orange-950/80 text-orange-300 border border-orange-800/80 font-mono">NAV 1 PAIRED</span>
-        </div>
-
-        <!-- High-tech Vintage 7-Segment / LED style Screen -->
-        <div class="bg-black/90 border-2 border-slate-800 rounded-lg p-3 grid grid-cols-3 gap-2 shadow-inner">
-          <!-- Nautical Miles -->
-          <div class="text-center border-r border-slate-800/80 pr-1">
-            <span class="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">DIST (NM)</span>
-            <div id="dme-dist" class="text-2xl font-bold led-display text-amber-400">10.4</div>
-          </div>
-          <!-- Groundspeed -->
-          <div class="text-center border-r border-slate-800/80 pr-1">
-            <span class="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">GS (KTS)</span>
-            <div id="dme-gs" class="text-2xl font-bold led-display text-amber-400">120</div>
-          </div>
-          <!-- Time to Station -->
-          <div class="text-center">
-            <span class="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">MIN (ETE)</span>
-            <div id="dme-min" class="text-2xl font-bold led-display text-amber-400">5.2</div>
-          </div>
-        </div>
-        <div class="text-[10px] text-slate-500 mt-1.5 flex justify-between px-1">
-          <span>*Calculates true 3D slant-range distance vs altitude</span>
-          <span id="cone-confusion-tag" class="text-amber-500 hidden font-semibold animate-pulse"><i class="fa-solid fa-triangle-exclamation"></i> Cone of Confusion</span>
-        </div>
-      </div>
-
-      <div class="bg-avionics-panel border border-avionics-border rounded-xl p-3 shadow-lg space-y-3">
-        <div class="flex items-center justify-between border-b border-avionics-border pb-1.5">
-          <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-gamepad text-sky-400"></i>
-            <h2 class="font-bold text-xs tracking-wider text-slate-100 font-gauge">AIRCRAFT FLIGHT CONTROLS</h2>
-          </div>
-          <!-- Play / Pause Sim Engine -->
+      <!-- 2. ULTRA-COMPACT BENDIX/KING KN 64 DME -->
+      <div class="bg-cockpit-panel border border-cockpit-border rounded-lg px-2.5 py-1 shadow-md shrink-0">
+        <div class="flex items-center justify-between border-b border-cockpit-border/70 pb-0.5 mb-1">
           <div class="flex items-center space-x-1.5">
-            <button id="btn-flight-sim" onclick="toggleFlightSimulation()" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-1">
-              <i class="fa-solid fa-play" id="sim-play-icon"></i> <span id="sim-play-text">Start Flight</span>
-            </button>
-            <button onclick="cycleSimSpeed()" id="btn-sim-speed" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold border border-slate-600" title="Simulation Time Compression">
-              1x
-            </button>
+            <i data-lucide="radio" class="w-3 h-3 text-cockpit-amber"></i>
+            <span class="font-bold text-[9px] tracking-wider text-slate-200 font-gauge uppercase">KN 64 DME</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[9px] font-mono">
+            <span class="text-amber-400 font-bold bg-amber-950/60 px-1 py-0.2 rounded border border-amber-800/50">NAV 1</span>
+            <span class="text-slate-400" id="dme-display-frequency">114.20 MHz</span>
           </div>
         </div>
 
-        <!-- Heading Slider & Control -->
-        <div>
-          <div class="flex justify-between items-center text-xs mb-1">
-            <span class="text-slate-300 font-medium">Aircraft Heading:</span>
-            <span class="font-mono text-sky-400 font-bold" id="val-heading">360° (NORTH)</span>
+        <!-- Amber LED Displays -->
+        <div class="bg-black border border-slate-800 rounded px-2 py-0.5 grid grid-cols-3 gap-1 shadow-inner">
+          <div class="text-center border-r border-slate-800/80 pr-1">
+            <div class="text-[7px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-0.5">NM (SLANT)</div>
+            <div id="dme-slant-nm" class="text-base sm:text-lg font-bold led-compact leading-none">20.0</div>
           </div>
-          <div class="flex items-center space-x-2">
-            <button onclick="adjustHeading(-10)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 text-xs border border-slate-700 font-mono">-10°</button>
-            <input type="range" id="input-heading" min="0" max="359" value="360" oninput="onHeadingChange(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400">
-            <button onclick="adjustHeading(10)" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 rounded text-slate-300 text-xs border border-slate-700 font-mono">+10°</button>
+          <div class="text-center border-r border-slate-800/80 pr-1">
+            <div class="text-[7px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-0.5">KT (GS)</div>
+            <div id="dme-groundspeed-kt" class="text-base sm:text-lg font-bold led-compact leading-none">120</div>
           </div>
-        </div>
-
-        <!-- Airspeed & Altitude Row -->
-        <div class="grid grid-cols-2 gap-3 pt-1">
-          <div>
-            <div class="flex justify-between text-xs mb-1">
-              <span class="text-slate-400">Airspeed:</span>
-              <span class="font-mono text-slate-200" id="val-speed">120 KT</span>
-            </div>
-            <input type="range" id="input-speed" min="60" max="220" value="120" oninput="onSpeedChange(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400">
-          </div>
-          <div>
-            <div class="flex justify-between text-xs mb-1">
-              <span class="text-slate-400">Altitude (AGL):</span>
-              <span class="font-mono text-slate-200" id="val-altitude">3,500 FT</span>
-            </div>
-            <input type="range" id="input-altitude" min="500" max="15000" step="500" value="3500" oninput="onAltitudeChange(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-400">
-          </div>
-        </div>
-
-        <!-- Preset Intercept Scenario Quick Buttons -->
-        <div class="pt-2 border-t border-avionics-border/60">
-          <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Preset Flight Training Scenarios:</span>
-          <div class="grid grid-cols-3 gap-1.5 text-xs">
-            <button onclick="loadScenario('inbound-090')" class="px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded text-slate-300 text-center leading-tight hover:text-white transition">
-              Inbound 090° Radial
-            </button>
-            <button onclick="loadScenario('outbound-270')" class="px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded text-slate-300 text-center leading-tight hover:text-white transition">
-              Outbound 270° Radial
-            </button>
-            <button onclick="loadScenario('cross-radial-intercept')" class="px-2 py-1.5 bg-slate-800/80 hover:bg-slate-700 border border-slate-700 rounded text-slate-300 text-center leading-tight hover:text-white transition">
-              45° Radial Intercept
-            </button>
+          <div class="text-center">
+            <div class="text-[7px] font-mono text-slate-400 uppercase tracking-widest leading-none mb-0.5">MIN (ETE)</div>
+            <div id="dme-time-ete" class="text-base sm:text-lg font-bold led-compact leading-none">10.0</div>
           </div>
         </div>
       </div>
 
-      <div id="quiz-panel" class="hidden bg-avionics-panel border border-avionics-border rounded-xl p-4 shadow-lg space-y-3">
-        <div class="flex items-center justify-between border-b border-avionics-border pb-2">
-          <div class="flex items-center space-x-2">
-            <i class="fa-solid fa-graduation-cap text-emerald-400"></i>
-            <h2 class="font-bold text-sm tracking-wide text-slate-100 font-gauge">VOR RADIAL ORIENTATION QUIZ</h2>
+      <!-- 3. COMPACT AUTOPILOT & FLIGHT CONTROLS -->
+      <div class="bg-cockpit-panel border border-cockpit-border rounded-lg p-1.5 shadow-md space-y-1 shrink-0">
+        <div class="flex items-center justify-between border-b border-cockpit-border/70 pb-0.5">
+          <div class="flex items-center space-x-1">
+            <i data-lucide="sliders" class="w-3 h-3 text-cockpit-cyan"></i>
+            <h2 class="font-bold text-[9px] tracking-wider text-slate-100 font-gauge uppercase">AUTOPILOT & CONTROLS</h2>
           </div>
-          <div class="text-xs font-mono bg-slate-900 border border-slate-700 px-2 py-0.5 rounded text-emerald-400">
-            Score: <span id="quiz-score" class="font-bold">0</span> / <span id="quiz-total">0</span>
+          
+          <div class="flex items-center bg-cockpit-surface border border-cockpit-border rounded p-0.5 text-[9px] font-mono">
+            <button id="ap-manual" onclick="setAutopilotMode('manual')" class="px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold shadow transition">MANUAL</button>
+            <button id="ap-hdg" onclick="setAutopilotMode('hdg')" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition">HDG HOLD</button>
+            <button id="ap-nav" onclick="setAutopilotMode('nav')" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition">NAV TRACK</button>
           </div>
         </div>
 
-        <div id="quiz-card" class="bg-avionics-card p-3 rounded-lg border border-avionics-border">
-          <div class="text-xs text-amber-400 font-semibold uppercase tracking-wider mb-1" id="quiz-question-type">Challenge 1: Radial Identification</div>
-          <p class="text-sm font-medium text-slate-200 mb-3" id="quiz-question-text">
-            Based on the VOR gauge needle centered with a FROM flag and OBS dialed to 090°, which radial are you currently on?
-          </p>
-
-          <!-- Quiz Options -->
-          <div id="quiz-options-container" class="grid grid-cols-2 gap-2 text-xs">
-            <!-- Dynamically populated buttons -->
-          </div>
-
-          <!-- Quiz Feedback -->
-          <div id="quiz-feedback" class="mt-3 p-2.5 rounded text-xs hidden leading-relaxed"></div>
+        <!-- Heading Slider -->
+        <div class="flex items-center space-x-2 text-[10px]">
+          <span class="text-slate-400 whitespace-nowrap">HDG:</span>
+          <span class="font-mono text-cockpit-cyan font-bold w-9" id="label-ac-heading">270°</span>
+          <button onclick="stepAircraftHeading(-5)" class="px-1 py-0.5 bg-cockpit-card hover:bg-slate-700 rounded text-slate-300 text-[9px] font-mono border border-cockpit-border">-5°</button>
+          <input type="range" id="slider-ac-heading" min="0" max="359" value="270" oninput="setAircraftHeading(this.value)" class="w-full h-1 appearance-none cursor-pointer">
+          <button onclick="stepAircraftHeading(5)" class="px-1 py-0.5 bg-cockpit-card hover:bg-slate-700 rounded text-slate-300 text-[9px] font-mono border border-cockpit-border">+5°</button>
         </div>
 
-        <div class="flex justify-between items-center pt-1">
-          <button onclick="generateNewQuizQuestion()" class="px-3 py-1.5 rounded bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-forward-step"></i> Next Question
+        <!-- Airspeed & Altitude -->
+        <div class="grid grid-cols-2 gap-2 text-[10px]">
+          <div class="flex items-center space-x-1.5">
+            <span class="text-slate-400 whitespace-nowrap">SPD:</span>
+            <span class="font-mono text-slate-200 font-bold w-12" id="label-ac-speed">120 KT</span>
+            <input type="range" id="slider-ac-speed" min="60" max="250" value="120" oninput="setAircraftSpeed(this.value)" class="w-full h-1 appearance-none cursor-pointer">
+          </div>
+          <div class="flex items-center space-x-1.5">
+            <span class="text-slate-400 whitespace-nowrap">ALT:</span>
+            <span class="font-mono text-slate-200 font-bold w-14" id="label-ac-alt">3,500 FT</span>
+            <input type="range" id="slider-ac-altitude" min="500" max="15000" step="500" value="3500" oninput="setAircraftAltitude(this.value)" class="w-full h-1 appearance-none cursor-pointer">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: 60 NM Tactical Airspace Radar (6 cols on lg) -->
+    <section class="lg:col-span-6 h-full flex flex-col bg-cockpit-panel border border-cockpit-border rounded-xl shadow-xl overflow-hidden relative min-h-0">
+      
+      <!-- Tactical Airspace Header Toolbar -->
+      <div class="px-3 py-1 bg-cockpit-surface border-b border-cockpit-border flex items-center justify-between text-xs shrink-0 z-20">
+        <div class="flex items-center space-x-2">
+          <span class="font-bold text-slate-100 font-gauge tracking-wider text-xs flex items-center gap-1">
+            <i data-lucide="radar" class="w-3.5 h-3.5 text-cockpit-cyan"></i> TACTICAL AIRSPACE
+          </span>
+          <span class="px-1.5 py-0.5 rounded bg-cockpit-card border border-cockpit-border text-[10px] font-mono text-cockpit-cyan font-bold" id="radar-range-badge">
+            60 NM
+          </span>
+        </div>
+
+        <!-- Zoom & View Toggles -->
+        <div class="flex items-center space-x-1.5">
+          <div class="flex items-center bg-cockpit-card border border-cockpit-border rounded-lg p-0.5 text-[10px] font-mono">
+            <button onclick="setRadarRange(15)" id="btn-zoom-15" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition">15 NM</button>
+            <button onclick="setRadarRange(30)" id="btn-zoom-30" class="px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition">30 NM</button>
+            <button onclick="setRadarRange(60)" id="btn-zoom-60" class="px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold transition">60 NM</button>
+          </div>
+
+          <button onclick="toggleQuadrants()" id="btn-toggle-quadrants" class="px-2 py-0.5 rounded bg-cockpit-cyan/15 text-cockpit-cyan border border-cockpit-cyan/40 hover:bg-cockpit-cyan/25 transition text-[10px]">
+            <i data-lucide="pie-chart" class="w-3 h-3 inline mr-0.5"></i> Sectors
           </button>
-          <span class="text-xs text-slate-500 italic">Position is randomized across 360°</span>
+          <button onclick="toggleTrail()" id="btn-toggle-trail" class="px-2 py-0.5 rounded bg-cockpit-card hover:bg-slate-700 text-slate-300 border border-cockpit-border transition text-[10px]">
+            <i data-lucide="route" class="w-3 h-3 inline mr-0.5"></i> Trail
+          </button>
         </div>
       </div>
 
-      <div id="guide-panel" class="hidden bg-avionics-panel border border-avionics-border rounded-xl p-4 shadow-lg space-y-4 text-xs leading-relaxed text-slate-300">
-        <div class="border-b border-avionics-border pb-2">
-          <h2 class="font-bold text-sm tracking-wide text-slate-100 font-gauge flex items-center gap-2">
-            <i class="fa-solid fa-book text-sky-400"></i> PILOT'S VOR / DME CHEAT SHEET & RULES
-          </h2>
+      <!-- Tactical Radar Canvas Container -->
+      <div class="flex-1 relative w-full h-full bg-[#040711] cursor-crosshair overflow-hidden select-none" id="radar-scope-container">
+        <canvas id="airspaceRadarCanvas" class="w-full h-full block"></canvas>
+
+        <!-- Live Telemetry HUD Overlay -->
+        <div class="absolute top-2 left-2 bg-cockpit-surface/90 border border-cockpit-border rounded p-1.5 text-[9px] font-mono shadow-xl backdrop-blur-md pointer-events-none z-10">
+          <div class="text-cockpit-cyan font-bold tracking-wider text-[8px] mb-0.5 flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-cockpit-cyan animate-pulse"></span> TELEMETRY
+          </div>
+          <div class="grid grid-cols-2 gap-x-2.5 gap-y-0.5 text-slate-300">
+            <div>Radial: <b class="text-cockpit-amber font-bold" id="hud-val-radial">---°</b></div>
+            <div>Bearing TO: <b class="text-cockpit-emerald font-bold" id="hud-val-bearing">---°</b></div>
+            <div>Slant DME: <b class="text-slate-100" id="hud-val-slant">--.- NM</b></div>
+            <div>Ground Dist: <b class="text-slate-100" id="hud-val-ground">--.- NM</b></div>
+            <div>Heading: <b class="text-slate-100" id="hud-val-heading">---°</b></div>
+            <div>Pos: <b class="text-slate-300" id="hud-val-offset">0.0, 0.0 NM</b></div>
+          </div>
         </div>
 
-        <div class="space-y-3 max-h-[380px] overflow-y-auto pr-2">
-          <div class="bg-avionics-card p-2.5 rounded-lg border border-avionics-border">
-            <h3 class="font-bold text-slate-100 text-xs mb-1 text-sky-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-compass"></i> What is a Radial?
-            </h3>
-            <p>Radials always project <strong>OUTWARD (FROM)</strong> the station like spokes on a bicycle wheel from 000° to 359° magnetic. If you are directly East of the station, you are on the <strong>090° Radial</strong>, regardless of which way the airplane's nose is pointed!</p>
-          </div>
+        <!-- Reverse Sensing Overlay Alert -->
+        <div id="banner-reverse-sensing-alert" class="hidden absolute top-2 left-1/2 -translate-x-1/2 bg-rose-950/95 border border-rose-500 text-rose-200 px-3 py-1 rounded-full text-[10px] font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-bounce z-20 pointer-events-none">
+          <i data-lucide="alert-triangle" class="w-3 h-3 text-rose-400"></i>
+          <span>REVERSE SENSING (VOR HEAD-TO-CRS MISMATCH)</span>
+        </div>
 
-          <div class="bg-avionics-card p-2.5 rounded-lg border border-avionics-border">
-            <h3 class="font-bold text-slate-100 text-xs mb-1 text-amber-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-flag"></i> TO / FROM Flag Logic
-            </h3>
-            <p>The indicator compares your selected OBS course to your position:</p>
-            <ul class="list-disc pl-4 mt-1 space-y-0.5 text-slate-300">
-              <li><strong>FROM:</strong> Plane is in the half-hemisphere towards which the selected OBS arrow points.</li>
-              <li><strong>TO:</strong> Plane is in the reciprocal hemisphere (flying this course takes you TO the VOR).</li>
-              <li><strong>NAV / OFF:</strong> 90° abeam the course line or in the <em>cone of confusion</em> overhead.</li>
-            </ul>
-          </div>
-
-          <div class="bg-avionics-card p-2.5 rounded-lg border border-avionics-border">
-            <h3 class="font-bold text-slate-100 text-xs mb-1 text-rose-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-arrows-turn-to-dots"></i> Avoiding "Reverse Sensing"
-            </h3>
-            <p>Reverse sensing happens when your aircraft heading is roughly opposite to the dialed OBS course. The needle points right, but you must steer left to intercept!</p>
-            <p class="mt-1 font-semibold text-amber-300">Golden Rule: When flying INBOUND to a VOR, always set the OBS to the inbound course (bearing TO the station). When flying OUTBOUND, set the OBS to the radial (FROM)!</p>
-          </div>
-
-          <div class="bg-avionics-card p-2.5 rounded-lg border border-avionics-border">
-            <h3 class="font-bold text-slate-100 text-xs mb-1 text-emerald-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-mountain"></i> DME Slant-Range Geometry
-            </h3>
-            <p>DME transmits radar pulses that measure <em>hypotenuse line-of-sight</em> distance. Directly over the station at 6,076 ft (1 NM altitude), your DME will read exactly <strong>1.0 NM</strong>, not 0.0!</p>
-          </div>
+        <!-- Overhead Cone of Confusion Alert -->
+        <div id="banner-cone-confusion-alert" class="hidden absolute bottom-4 left-1/2 -translate-x-1/2 bg-amber-950/95 border border-amber-500 text-amber-200 px-3 py-1 rounded-full text-[10px] font-bold shadow-xl backdrop-blur-md flex items-center gap-1.5 animate-pulse z-20 pointer-events-none">
+          <i data-lucide="refresh-cw" class="w-3 h-3 text-amber-400"></i>
+          <span>OVERHEAD CONE OF CONFUSION</span>
         </div>
       </div>
 
+      <!-- Tactical Radar Footer -->
+      <div class="px-3 py-1 bg-cockpit-surface border-t border-cockpit-border flex items-center justify-between text-[10px] text-slate-400 shrink-0 z-10">
+        <div class="flex items-center space-x-2">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-cockpit-cyan inline-block"></span> CRS</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-0.5 bg-cockpit-amber inline-block"></span> Radial</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500/30 inline-block border border-emerald-500/60"></span> TO</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500/30 inline-block border border-amber-500/60"></span> FROM</span>
+        </div>
+        <div class="text-slate-400 font-mono text-[9px]">
+          Scope: <span id="radar-scale-text" class="text-slate-200 font-bold">60 NM (10 NM Rings)</span>
+        </div>
+      </div>
     </section>
   </main>
 
   <script>
-    /* ==========================================================================
-       1. GLOBAL STATE & NAVIGATION GEOMETRY
-       ========================================================================== */
-    const state = {
-      // Airspace geometry (Station located at map center)
-      mapScaleNM: 30, // Canvas radius represents 30 Nautical Miles
-      vorStation: { x: 0, y: 0, ident: 'MCN', freq: '114.20' }, // coordinates in NM relative to center
-      aircraft: {
-        x: -12.0, // NM west
-        y: 8.0,   // NM north
-        heading: 090, // Degrees magnetic (0-359)
-        speedKts: 120, // Groundspeed in knots
-        altitudeFt: 3500 // Feet MSL
+    const SIM = {
+      radarRangeNM: 60,
+      activeInstrument: 'vor', // 'vor' or 'hsi'
+      
+      stations: {
+        'MCN': { id: 'MCN', name: 'Macon VOR/DME', freq: '114.20', elevationFt: 350, morse: '-- -.-. -.' },
+        'ATL': { id: 'ATL', name: 'Atlanta VOR/TAC', freq: '116.90', elevationFt: 1026, morse: '.- - .-..' },
+        'JAX': { id: 'JAX', name: 'Craig VOR/DME', freq: '114.50', elevationFt: 41, morse: '.--- .- -..-' }
       },
-      // Instrument Settings
-      obsCourse: 090, // Dialed course (0-359)
-      // Visual Toggles
-      showSectors: true,
-      showTrails: true,
-      trailHistory: [], // Array of {x, y}
-      // Simulation loop
+      currentStationKey: 'MCN',
+      stationPos: { x: 0, y: 0 },
+
+      aircraft: {
+        x: 18.0,
+        y: -3.0,
+        heading: 270,
+        speedKts: 120,
+        altitudeFt: 3500
+      },
+
+      obsCourse: 270,
+      headingBug: 270,
+      apMode: 'manual', // 'manual', 'hdg', 'nav'
+
+      showQuadrants: true,
+      showTrail: true,
+      trailPoints: [],
+
       isSimRunning: false,
       simSpeedMultiplier: 1,
-      lastSimTickTime: 0,
-      // Audio ident
+      lastTimestamp: 0,
+
+      isDraggingPlane: false,
+      isDraggingOBS: false,
+      isDraggingHsiCRS: false,
+      isDraggingHsiHDG: false,
+      lastMouseX: 0,
+
       audioCtx: null,
-      isMorsePlaying: false,
-      morseTimer: null,
-      // Mode: 'explore' | 'quiz' | 'guide'
-      currentMode: 'explore',
-      // Quiz Data
-      quiz: {
-        score: 0,
-        total: 0,
-        currentQuestion: null,
-        solutionRevealed: false
-      }
+      isMorseActive: false,
+      morseTimeout: null
     };
 
-    const canvas = document.getElementById('airspaceCanvas');
+    const canvas = document.getElementById('airspaceRadarCanvas');
     const ctx = canvas.getContext('2d');
-    const container = document.getElementById('canvas-container');
-
-    // Dragging interaction state
-    let isDraggingAircraft = false;
-    let isDraggingStation = false;
+    const container = document.getElementById('radar-scope-container');
 
     function degToRad(deg) { return (deg * Math.PI) / 180; }
     function radToDeg(rad) { return (rad * 180) / Math.PI; }
+
     function normalize360(deg) {
       let d = deg % 360;
       return d < 0 ? d + 360 : d;
     }
 
-    /**
-     * Compute current radial from VOR to Aircraft (000° - 359°)
-     */
-    function computeCurrentRadial() {
-      const dx = state.aircraft.x - state.vorStation.x;
-      const dy = state.aircraft.y - state.vorStation.y;
+    function normalize180(deg) {
+      let a = (deg + 180) % 360;
+      if (a < 0) a += 360;
+      return a - 180;
+    }
+
+    function calculateCurrentRadial() {
+      const dx = SIM.aircraft.x - SIM.stationPos.x;
+      const dy = SIM.aircraft.y - SIM.stationPos.y;
       if (Math.hypot(dx, dy) < 0.05) return 0;
-      // In cartesian: dy is North (+), dx is East (+)
-      // Aviation bearing: 000 is North (+y), 090 is East (+x)
-      let angle = radToDeg(Math.atan2(dx, dy));
-      return Math.round(normalize360(angle));
+      return normalize360(radToDeg(Math.atan2(dx, dy)));
     }
 
-    /**
-     * Compute Bearing TO the station (Reciprocal of radial)
-     */
-    function computeBearingToStation() {
-      return normalize360(computeCurrentRadial() + 180);
+    function calculateBearingToStation() {
+      return normalize360(calculateCurrentRadial() + 180);
     }
 
-    /**
-     * Compute Slant-range DME distance taking into account altitude
-     */
-    function computeDMEDistance() {
-      const dx = state.aircraft.x - state.vorStation.x;
-      const dy = state.aircraft.y - state.vorStation.y;
-      const groundDistanceNM = Math.hypot(dx, dy);
-      const altitudeNM = state.aircraft.altitudeFt / 6076.12; // 1 NM = 6076.12 ft
-      return Math.hypot(groundDistanceNM, altitudeNM);
+    function calculateGroundDistance() {
+      return Math.hypot(SIM.aircraft.x - SIM.stationPos.x, SIM.aircraft.y - SIM.stationPos.y);
     }
 
-    function initializeAzimuthCard() {
-      const group = document.getElementById('azimuth-card-ticks');
-      group.innerHTML = '';
+    function calculateSlantRangeDME() {
+      const groundDist = calculateGroundDistance();
+      const station = SIM.stations[SIM.currentStationKey];
+      const altAglFt = Math.max(0, SIM.aircraft.altitudeFt - station.elevationFt);
+      const altNM = altAglFt / 6076.12;
+      return Math.hypot(groundDist, altNM);
+    }
 
-      // Outer bezel circle
-      const outerCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      outerCircle.setAttribute('cx', '100');
-      outerCircle.setAttribute('cy', '100');
-      outerCircle.setAttribute('r', '96');
-      outerCircle.setAttribute('fill', '#111827');
-      outerCircle.setAttribute('stroke', '#374151');
-      outerCircle.setAttribute('stroke-width', '2');
-      group.appendChild(outerCircle);
+    function switchInstrumentMode(mode) {
+      SIM.activeInstrument = mode;
+      const isVor = mode === 'vor';
+      document.getElementById('instrument-view-vor').classList.toggle('hidden', !isVor);
+      document.getElementById('instrument-view-hsi').classList.toggle('hidden', isVor);
 
-      // Radial ticks every 5 and 10 degrees, labels every 30 degrees
+      document.getElementById('tab-btn-vor').className = isVor 
+        ? "px-3 py-1 rounded bg-cockpit-cyan text-slate-950 shadow transition flex items-center gap-1.5 font-bold"
+        : "px-3 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 font-bold";
+      document.getElementById('tab-btn-hsi').className = !isVor 
+        ? "px-3 py-1 rounded bg-cockpit-cyan text-slate-950 shadow transition flex items-center gap-1.5 font-bold"
+        : "px-3 py-1 rounded text-slate-400 hover:text-slate-200 transition flex items-center gap-1.5 font-bold";
+
+      document.getElementById('panel-readout-hdg').classList.toggle('hidden', isVor);
+      updateCockpitAvionics();
+    }
+
+    function initializeInstrumentDialsStatic() {
+      // 1. Traditional VOR Static Ticks (viewBox 280x280, center at 140, 140)
+      const vorTicksGroup = document.getElementById('vor-ticks-group');
+      vorTicksGroup.innerHTML = '';
       for (let deg = 0; deg < 360; deg += 5) {
         const rad = degToRad(deg);
         const isMajor = deg % 30 === 0;
         const isMedium = deg % 10 === 0;
-        const tickLength = isMajor ? 12 : (isMedium ? 8 : 4);
-        const r1 = 94;
-        const r2 = r1 - tickLength;
+        const tickLength = isMajor ? 14 : (isMedium ? 9 : 5);
+        const rOuter = 135;
+        const rInner = rOuter - tickLength;
 
-        const x1 = 100 + r1 * Math.sin(rad);
-        const y1 = 100 - r1 * Math.cos(rad);
-        const x2 = 100 + r2 * Math.sin(rad);
-        const y2 = 100 - r2 * Math.cos(rad);
+        const x1 = 140 + rOuter * Math.sin(rad);
+        const y1 = 140 - rOuter * Math.cos(rad);
+        const x2 = 140 + rInner * Math.sin(rad);
+        const y2 = 140 - rInner * Math.cos(rad);
 
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('x1', x1);
         line.setAttribute('y1', y1);
         line.setAttribute('x2', x2);
         line.setAttribute('y2', y2);
-        line.setAttribute('stroke', isMajor ? '#f8fafc' : '#94a3b8');
-        line.setAttribute('stroke-width', isMajor ? '2' : '1');
-        group.appendChild(line);
+        line.setAttribute('stroke', isMajor ? '#f8fafc' : (isMedium ? '#cbd5e1' : '#64748b'));
+        line.setAttribute('stroke-width', isMajor ? '2.5' : '1.2');
+        vorTicksGroup.appendChild(line);
+      }
 
-        if (isMajor) {
-          const textR = 70;
-          const tx = 100 + textR * Math.sin(rad);
-          const ty = 100 - textR * Math.cos(rad);
+      // 2. Modern HSI Static Ticks (viewBox 280x280, center at 140, 140)
+      const hsiTicksGroup = document.getElementById('hsi-ticks-group');
+      hsiTicksGroup.innerHTML = '';
+      for (let deg = 0; deg < 360; deg += 5) {
+        const rad = degToRad(deg);
+        const isMajor = deg % 30 === 0;
+        const isMedium = deg % 10 === 0;
+        const tickLength = isMajor ? 13 : (isMedium ? 8 : 5);
+        const rOuter = 135;
+        const rInner = rOuter - tickLength;
 
-          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-          text.setAttribute('x', tx);
-          text.setAttribute('y', ty);
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('dominant-baseline', 'central');
-          text.setAttribute('fill', deg === 0 ? '#38bdf8' : '#e2e8f0');
-          text.setAttribute('font-size', '9.5');
-          text.setAttribute('font-weight', 'bold');
-          text.setAttribute('font-family', 'JetBrains Mono, monospace');
+        const x1 = 140 + rOuter * Math.sin(rad);
+        const y1 = 140 - rOuter * Math.cos(rad);
+        const x2 = 140 + rInner * Math.sin(rad);
+        const y2 = 140 - rInner * Math.cos(rad);
 
-          let label = String(deg / 10);
-          if (deg === 0) label = 'N';
-          else if (deg === 90) label = 'E';
-          else if (deg === 180) label = 'S';
-          else if (deg === 270) label = 'W';
-          else if (label.length === 1) label = '0' + label;
-
-          text.textContent = label;
-          group.appendChild(text);
-        }
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', x1);
+        line.setAttribute('y1', y1);
+        line.setAttribute('x2', x2);
+        line.setAttribute('y2', y2);
+        line.setAttribute('stroke', isMajor ? '#ffffff' : (isMedium ? '#cbd5e1' : '#475569'));
+        line.setAttribute('stroke-width', isMajor ? '2.5' : '1.2');
+        hsiTicksGroup.appendChild(line);
       }
     }
 
-    function updateInstruments() {
-      const currentRadial = computeCurrentRadial();
-      const obs = state.obsCourse;
-      const slantDME = computeDMEDistance();
-      const groundDistance = Math.hypot(state.aircraft.x - state.vorStation.x, state.aircraft.y - state.vorStation.y);
+    function renderVorUprightLabels() {
+      const labelsGroup = document.getElementById('vor-upright-labels-group');
+      labelsGroup.innerHTML = '';
 
-      // 1. Rotate Azimuth Card on gauge so OBS is at top index
-      // When OBS is dialed, card rotates counter-clockwise
-      const card = document.getElementById('vor-azimuth-card');
-      card.style.transform = `rotate(${-obs}deg)`;
-      document.getElementById('obs-digital-readout').textContent = `${String(obs).padStart(3, '0')}°`;
+      const cardAngle = -SIM.obsCourse;
+      const textRadius = 104;
 
-      // 2. TO / FROM Flag Computation
-      // Angle difference between current radial and OBS
-      let diff = normalize360(currentRadial - obs);
-      // diff in range [-180, +180]
-      let relAngle = diff > 180 ? diff - 360 : diff;
+      for (let deg = 0; deg < 360; deg += 30) {
+        const currentDialDeg = normalize360(deg + cardAngle);
+        const rad = degToRad(currentDialDeg);
 
-      const flagElem = document.getElementById('vor-flag');
-      let isTo = false;
-      let isOff = false;
+        const x = 140 + textRadius * Math.sin(rad);
+        const y = 140 - textRadius * Math.cos(rad);
 
-      // In the cone of confusion directly above VOR (approx 1 NM ground radius per 5000 ft)
-      const coneRadiusNM = (state.aircraft.altitudeFt / 5000) * 0.4 + 0.3;
-      const inConeOfConfusion = groundDistance < coneRadiusNM;
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', x);
+        txt.setAttribute('y', y);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'central');
+        txt.setAttribute('font-family', 'JetBrains Mono, monospace');
+        txt.setAttribute('font-size', '13');
+        txt.setAttribute('font-weight', '700');
 
-      if (inConeOfConfusion || Math.abs(Math.abs(relAngle) - 90) < 1.0) {
-        // NAV / OFF flag
-        isOff = true;
-        flagElem.textContent = 'OFF';
-        flagElem.className = 'font-gauge font-bold text-xs tracking-wider text-rose-500 bg-rose-950/40 px-2 py-0.5 rounded';
-        document.getElementById('cone-confusion-tag').classList.toggle('hidden', !inConeOfConfusion);
-      } else if (Math.abs(relAngle) < 90) {
-        // In the same hemisphere as selected OBS = FROM
-        flagElem.textContent = 'FROM';
-        flagElem.className = 'font-gauge font-bold text-xs tracking-wider text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded';
-        document.getElementById('cone-confusion-tag').classList.add('hidden');
+        let label = String(deg / 10);
+        if (deg === 0) { label = 'N'; txt.setAttribute('fill', '#06b6d4'); }
+        else if (deg === 90) { label = 'E'; txt.setAttribute('fill', '#f8fafc'); }
+        else if (deg === 180) { label = 'S'; txt.setAttribute('fill', '#f8fafc'); }
+        else if (deg === 270) { label = 'W'; txt.setAttribute('fill', '#f8fafc'); }
+        else {
+          txt.setAttribute('fill', '#94a3b8');
+          if (label.length === 1) label = '0' + label;
+        }
+
+        txt.textContent = label;
+        labelsGroup.appendChild(txt);
+      }
+
+      document.getElementById('vor-card-rotator').setAttribute('transform', `rotate(${cardAngle} 140 140)`);
+    }
+
+    function renderHsiUprightLabels() {
+      const labelsGroup = document.getElementById('hsi-upright-labels-group');
+      labelsGroup.innerHTML = '';
+
+      const cardAngle = -SIM.aircraft.heading;
+      const textRadius = 104;
+
+      for (let deg = 0; deg < 360; deg += 30) {
+        const currentDialDeg = normalize360(deg + cardAngle);
+        const rad = degToRad(currentDialDeg);
+
+        const x = 140 + textRadius * Math.sin(rad);
+        const y = 140 - textRadius * Math.cos(rad);
+
+        const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        txt.setAttribute('x', x);
+        txt.setAttribute('y', y);
+        txt.setAttribute('text-anchor', 'middle');
+        txt.setAttribute('dominant-baseline', 'central');
+        txt.setAttribute('font-family', 'JetBrains Mono, monospace');
+        txt.setAttribute('font-size', '13');
+        txt.setAttribute('font-weight', '700');
+
+        let label = String(deg / 10);
+        if (deg === 0) { label = 'N'; txt.setAttribute('fill', '#06b6d4'); }
+        else if (deg === 90) { label = 'E'; txt.setAttribute('fill', '#f8fafc'); }
+        else if (deg === 180) { label = 'S'; txt.setAttribute('fill', '#f8fafc'); }
+        else if (deg === 270) { label = 'W'; txt.setAttribute('fill', '#f8fafc'); }
+        else {
+          txt.setAttribute('fill', '#94a3b8');
+          if (label.length === 1) label = '0' + label;
+        }
+
+        txt.textContent = label;
+        labelsGroup.appendChild(txt);
+      }
+
+      document.getElementById('hsi-heading-rotator').setAttribute('transform', `rotate(${cardAngle} 140 140)`);
+    }
+
+    function computeVORInstrumentState() {
+      const Rac = calculateCurrentRadial();
+      const obs = SIM.obsCourse;
+      const groundDist = calculateGroundDistance();
+
+      const altNM = SIM.aircraft.altitudeFt / 6076.12;
+      const coneRadiusNM = Math.max(0.4, altNM * 0.65);
+      const isInsideCone = groundDist <= coneRadiusNM;
+
+      const diff = normalize180(Rac - obs);
+      const absDiff = Math.abs(diff);
+
+      let flag = 'OFF';
+      let rawAngularDeflection = 0;
+
+      if (isInsideCone || (absDiff >= 88 && absDiff <= 92)) {
+        flag = 'OFF';
+        rawAngularDeflection = 0;
+      } else if (absDiff < 88) {
+        flag = 'FROM';
+        rawAngularDeflection = -diff;
       } else {
-        // In the opposite hemisphere = TO
-        isTo = true;
-        flagElem.textContent = 'TO';
-        flagElem.className = 'font-gauge font-bold text-xs tracking-wider text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded';
-        document.getElementById('cone-confusion-tag').classList.add('hidden');
+        flag = 'TO';
+        const obsRecip = normalize360(obs + 180);
+        const diffRecip = normalize180(Rac - obsRecip);
+        rawAngularDeflection = diffRecip;
       }
 
-      // 3. CDI Needle Deflection (Standard VOR: Full deflection is ±10 degrees)
-      // Standard rule: When flying towards the radial with standard sensing,
-      // needle deflects towards the radial.
-      let angularDeflection = relAngle;
-      if (isTo) {
-        // If in TO zone, radial is reciprocal
-        let recip = normalize360(obs + 180);
-        let diffTo = normalize360(currentRadial - recip);
-        angularDeflection = diffTo > 180 ? diffTo - 360 : diffTo;
-      }
+      // Standard VOR 5-dot CDI scale clamp: ±10° (2° per dot)
+      const vorDeflection = Math.max(-10, Math.min(10, rawAngularDeflection));
+      const vorNeedleDots = vorDeflection / 2.0;
 
-      // Clamp deflection to ±10 degrees (or ±12 max pegged)
-      // Needle deflection in pixels: center circle is ~144px wide; ±5 dots = ±48px
-      let clampedDeflection = Math.max(-10, Math.min(10, angularDeflection));
-      // Invert sign so positive error pushes needle appropriately towards course
-      const deflectionPixels = (-clampedDeflection / 10) * 44; 
+      // Extended HSI scale: On HSI, 2 dots on each side represent 5° and 10° (or 2.5°/5°).
+      // Here 2nd dot is reached at ±10°. We allow smooth travel PAST the 2nd dot up to ±15°
+      // (into the over-deflection margin, reaching out to the edge of the course arrow slot at ±54px).
+      const hsiDeflection = Math.max(-15, Math.min(15, rawAngularDeflection));
 
-      const needle = document.getElementById('cdi-needle-container');
-      needle.style.transform = `translateX(${deflectionPixels}px)`;
+      return {
+        radial: Rac,
+        obs: obs,
+        flag: flag,
+        rawDeflection: rawAngularDeflection,
+        vorDeflection: vorDeflection,
+        hsiDeflection: hsiDeflection,
+        needleDots: vorNeedleDots,
+        isInsideCone: isInsideCone
+      };
+    }
 
-      // Status text
-      const cdiDegText = document.getElementById('cdi-degrees-text');
-      if (Math.abs(clampedDeflection) < 0.2) {
-        cdiDegText.textContent = "Centered (ON COURSE)";
-        cdiDegText.className = "text-emerald-400 font-mono font-bold";
+    function updateCockpitAvionics() {
+      const state = computeVORInstrumentState();
+      const slantDME = calculateSlantRangeDME();
+      const groundDist = calculateGroundDistance();
+
+      document.getElementById('obs-readout').textContent = `${String(SIM.obsCourse).padStart(3, '0')}°`;
+      document.getElementById('hsi-crs-indicator').textContent = `${String(SIM.obsCourse).padStart(3, '0')}°`;
+      document.getElementById('hsi-bug-indicator').textContent = `${String(SIM.headingBug).padStart(3, '0')}°`;
+      document.getElementById('hsi-hdg-readout').textContent = `${String(Math.round(SIM.aircraft.heading)).padStart(3, '0')}°`;
+
+      // 1. VOR / CDI Update (±55px needle travel for large 270px face)
+      renderVorUprightLabels();
+      const vorFlagElem = document.getElementById('vor-flag-indicator');
+      if (state.flag === 'TO') {
+        vorFlagElem.textContent = 'TO';
+        vorFlagElem.className = 'font-gauge font-bold text-xs tracking-wider text-cockpit-emerald bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-700/60 shadow';
+      } else if (state.flag === 'FROM') {
+        vorFlagElem.textContent = 'FROM';
+        vorFlagElem.className = 'font-gauge font-bold text-xs tracking-wider text-cockpit-amber bg-amber-950/70 px-2 py-0.5 rounded border border-amber-700/60 shadow';
       } else {
-        const side = deflectionPixels > 0 ? "FLY RIGHT" : "FLY LEFT";
-        cdiDegText.textContent = `${Math.abs(clampedDeflection).toFixed(1)}° (${side})`;
-        cdiDegText.className = "text-amber-400 font-mono font-bold";
+        vorFlagElem.textContent = 'NAV';
+        vorFlagElem.className = 'font-gauge font-bold text-xs tracking-wider text-rose-500 bg-rose-950/70 px-2 py-0.5 rounded border border-rose-700/60 shadow';
       }
 
-      // 4. Reverse Sensing Detection
-      // Occurs if heading is roughly opposite (difference > 90°) to the intended flight track
-      // If flag is TO: intended heading is OBS course
-      // If flag is FROM: intended heading is OBS course (flying away)
-      let headingDifference = Math.abs(normalize360(state.aircraft.heading - obs));
-      if (headingDifference > 180) headingDifference = 360 - headingDifference;
-      
-      const isReverse = headingDifference > 105;
-      const reverseBadge = document.getElementById('reverse-sensing-badge');
-      const senseText = document.getElementById('sensing-direction-text');
+      const needlePx = (state.vorDeflection / 10) * 55;
+      document.getElementById('vor-needle-wrapper').style.transform = `translateX(${needlePx}px)`;
 
-      if (isReverse) {
-        reverseBadge.classList.remove('hidden');
-        senseText.textContent = "REVERSE SENSING (Inverted)";
-        senseText.className = "text-rose-400 font-bold font-mono";
+      // 2. Modern HSI Update
+      // Scale: Center is 140. Dot 1 is at ±18px (x=122, x=158). Dot 2 is at ±36px (x=104, x=176).
+      // At 10° deflection, the bar is at the 2nd dot (36px).
+      // Beyond 10° (up to 15°), the bar smoothly travels further out of the second dot (up to 54px).
+      renderHsiUprightLabels();
+      document.getElementById('hsi-heading-bug').setAttribute('transform', `rotate(${SIM.headingBug} 140 140)`);
+      document.getElementById('hsi-course-assembly').setAttribute('transform', `rotate(${SIM.obsCourse} 140 140)`);
+
+      // 3.6px per degree of deflection: 10° = 36px (exactly at dot 2), 15° = 54px (well past dot 2)
+      const hsiBarPx = state.hsiDeflection * 3.6;
+      document.getElementById('hsi-deviation-bar').setAttribute('transform', `translate(${hsiBarPx}, 0)`);
+
+      const toTri = document.getElementById('hsi-to-tri');
+      const fromTri = document.getElementById('hsi-from-tri');
+      if (state.flag === 'TO') {
+        toTri.classList.remove('hidden');
+        fromTri.classList.add('hidden');
+      } else if (state.flag === 'FROM') {
+        toTri.classList.add('hidden');
+        fromTri.classList.remove('hidden');
       } else {
-        reverseBadge.classList.add('hidden');
-        senseText.textContent = "Normal Sensing";
-        senseText.className = "text-emerald-400 font-semibold font-mono";
+        toTri.classList.add('hidden');
+        fromTri.classList.add('hidden');
       }
 
-      // 5. Update DME Display Readout
-      document.getElementById('dme-dist').textContent = slantDME.toFixed(1);
-      document.getElementById('dme-gs').textContent = state.aircraft.speedKts;
+      // 3. Reverse Sensing & Alerts
+      document.getElementById('banner-cone-confusion-alert').classList.toggle('hidden', !state.isInsideCone);
 
-      // ETE Calculation: Time = Dist / (Groundspeed component towards station)
-      // Vector projection of velocity towards station
-      const planeHdgRad = degToRad(state.aircraft.heading);
-      const vx = state.aircraft.speedKts * Math.sin(planeHdgRad);
-      const vy = state.aircraft.speedKts * Math.cos(planeHdgRad);
-      // Unit vector from plane to station
-      const dxToStation = state.vorStation.x - state.aircraft.x;
-      const dyToStation = state.vorStation.y - state.aircraft.y;
+      const headingMismatch = Math.abs(normalize180(SIM.aircraft.heading - SIM.obsCourse));
+      const isReverseSensing = headingMismatch > 95;
+      document.getElementById('banner-reverse-sensing-alert').classList.toggle('hidden', !(isReverseSensing && SIM.activeInstrument === 'vor'));
+
+      const badgeReverse = document.getElementById('badge-reverse-sensing');
+      if (SIM.activeInstrument === 'hsi') {
+        badgeReverse.textContent = 'HSI SLAVED';
+        badgeReverse.className = 'text-cyan-400 font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-cockpit-border';
+      } else if (isReverseSensing) {
+        badgeReverse.textContent = 'REVERSE';
+        badgeReverse.className = 'text-rose-400 font-bold bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-700 shadow';
+      } else {
+        badgeReverse.textContent = 'NORMAL';
+        badgeReverse.className = 'text-emerald-400 font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-cockpit-border';
+      }
+
+      const txtSteer = document.getElementById('txt-steering-banner');
+      const txtDevVal = document.getElementById('txt-needle-deflection-val');
+      const absRaw = Math.abs(state.rawDeflection);
+
+      if (state.flag === 'OFF') {
+        txtSteer.textContent = 'SIGNAL OFF';
+        txtSteer.className = 'text-rose-400 font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-cockpit-border';
+        txtDevVal.textContent = 'FLAG OFF';
+      } else if (absRaw < 0.2) {
+        txtSteer.textContent = 'ON COURSE';
+        txtSteer.className = 'text-cockpit-emerald font-bold bg-cockpit-surface px-1.5 py-0.5 rounded border border-emerald-800 shadow-glow-emerald';
+        txtDevVal.textContent = '0.0°';
+      } else if (state.rawDeflection > 0) {
+        const beyondText = absRaw > 10 ? ' (PAST 2ND DOT)' : '';
+        txtSteer.textContent = `FLY RIGHT →${beyondText}`;
+        txtSteer.className = 'text-cockpit-amber font-bold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-700/60 shadow-glow-amber';
+        txtDevVal.textContent = `+${absRaw.toFixed(1)}° R`;
+      } else {
+        const beyondText = absRaw > 10 ? ' (PAST 2ND DOT)' : '';
+        txtSteer.textContent = `← FLY LEFT${beyondText}`;
+        txtSteer.className = 'text-cockpit-amber font-bold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-700/60 shadow-glow-amber';
+        txtDevVal.textContent = `-${absRaw.toFixed(1)}° L`;
+      }
+
+      // 4. Ultra-Compact KN 64 DME
+      document.getElementById('dme-slant-nm').textContent = slantDME.toFixed(1);
+      document.getElementById('dme-groundspeed-kt').textContent = Math.round(SIM.aircraft.speedKts);
+
+      const planeRad = degToRad(SIM.aircraft.heading);
+      const vx = SIM.aircraft.speedKts * Math.sin(planeRad);
+      const vy = SIM.aircraft.speedKts * Math.cos(planeRad);
+      const dxToStation = SIM.stationPos.x - SIM.aircraft.x;
+      const dyToStation = SIM.stationPos.y - SIM.aircraft.y;
       const dist2D = Math.hypot(dxToStation, dyToStation);
 
-      if (dist2D > 0.05 && state.aircraft.speedKts > 0) {
+      if (dist2D > 0.1 && SIM.aircraft.speedKts > 5) {
         const ux = dxToStation / dist2D;
         const uy = dyToStation / dist2D;
-        const closureRate = vx * ux + vy * uy; // knots towards station
+        const closureRate = vx * ux + vy * uy;
 
         if (closureRate > 5) {
-          const eteMinutes = (slantDME / closureRate) * 60;
-          document.getElementById('dme-min').textContent = eteMinutes < 99.9 ? eteMinutes.toFixed(1) : '--';
+          const eteMin = (slantDME / closureRate) * 60;
+          document.getElementById('dme-time-ete').textContent = eteMin < 99.9 ? eteMin.toFixed(1) : '--';
         } else {
-          document.getElementById('dme-min').textContent = '--';
+          document.getElementById('dme-time-ete').textContent = '--';
         }
       } else {
-        document.getElementById('dme-min').textContent = '--';
+        document.getElementById('dme-time-ete').textContent = '--';
       }
 
-      // 6. Map Telemetry Panel
-      document.getElementById('tele-radial').textContent = `${String(currentRadial).padStart(3, '0')}°`;
-      document.getElementById('tele-bearing').textContent = `${String(computeBearingToStation()).padStart(3, '0')}°`;
-      document.getElementById('tele-dist').textContent = `${slantDME.toFixed(1)} NM`;
-      document.getElementById('tele-alt').textContent = `${state.aircraft.altitudeFt.toLocaleString()} FT`;
-      document.getElementById('tele-hdg').textContent = `${String(state.aircraft.heading).padStart(3, '0')}°`;
-      document.getElementById('tele-speed').textContent = `${state.aircraft.speedKts} KT`;
+      // 5. Telemetry HUD
+      document.getElementById('hud-val-radial').textContent = `${String(Math.round(state.radial)).padStart(3, '0')}°`;
+      document.getElementById('hud-val-bearing').textContent = `${String(Math.round(calculateBearingToStation())).padStart(3, '0')}°`;
+      document.getElementById('hud-val-slant').textContent = `${slantDME.toFixed(1)} NM`;
+      document.getElementById('hud-val-ground').textContent = `${groundDist.toFixed(1)} NM`;
+      document.getElementById('hud-val-heading').textContent = `${String(Math.round(SIM.aircraft.heading)).padStart(3, '0')}°`;
+      document.getElementById('hud-val-offset').textContent = `${SIM.aircraft.x.toFixed(1)}, ${SIM.aircraft.y.toFixed(1)} NM`;
     }
 
-    function resizeCanvas() {
+    function resizeRadarCanvas() {
       const rect = container.getBoundingClientRect();
-      // crisp Retina / high DPI scaling
       const dpr = window.devicePixelRatio || 1;
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
@@ -765,33 +946,27 @@
       renderAirspace();
     }
 
-    /**
-     * Converts Nautical Mile relative coordinates to Canvas Pixel coordinates
-     */
-    function nmToCanvas(nmX, nmY) {
+    function nmToRadarPixel(nmX, nmY) {
       const rect = container.getBoundingClientRect();
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const pixelsPerNM = Math.min(rect.width, rect.height) / (state.mapScaleNM * 2);
+      const pxPerNM = Math.min(rect.width, rect.height) / (SIM.radarRangeNM * 2);
 
       return {
-        x: centerX + (nmX * pixelsPerNM),
-        y: centerY - (nmY * pixelsPerNM) // inverted Y for North up
+        x: centerX + (nmX * pxPerNM),
+        y: centerY - (nmY * pxPerNM)
       };
     }
 
-    /**
-     * Converts Canvas Pixel coordinates to Nautical Mile relative coordinates
-     */
-    function canvasToNM(pxX, pxY) {
+    function radarPixelToNM(pxX, pxY) {
       const rect = container.getBoundingClientRect();
       const centerX = rect.width / 2;
       const centerY = rect.height / 2;
-      const pixelsPerNM = Math.min(rect.width, rect.height) / (state.mapScaleNM * 2);
+      const pxPerNM = Math.min(rect.width, rect.height) / (SIM.radarRangeNM * 2);
 
       return {
-        x: (pxX - centerX) / pixelsPerNM,
-        y: (centerY - pxY) / pixelsPerNM
+        x: (pxX - centerX) / pxPerNM,
+        y: (centerY - pxY) / pxPerNM
       };
     }
 
@@ -800,50 +975,48 @@
       const w = rect.width;
       const h = rect.height;
 
-      // Clear background
-      ctx.fillStyle = '#080c14';
+      ctx.fillStyle = '#040711';
       ctx.fillRect(0, 0, w, h);
 
-      const centerPix = nmToCanvas(state.vorStation.x, state.vorStation.y);
-      const pixelsPerNM = Math.min(w, h) / (state.mapScaleNM * 2);
+      const center = nmToRadarPixel(SIM.stationPos.x, SIM.stationPos.y);
+      const pxPerNM = Math.min(w, h) / (SIM.radarRangeNM * 2);
 
-      /* 1. Range Rings (5, 10, 15, 20, 25 NM) */
+      // Range Rings (10, 20, 30, 40, 50, 60 NM)
+      const ringStep = SIM.radarRangeNM <= 15 ? 3 : (SIM.radarRangeNM <= 30 ? 5 : 10);
       ctx.save();
-      for (let r = 5; r <= state.mapScaleNM; r += 5) {
+      for (let r = ringStep; r <= SIM.radarRangeNM; r += ringStep) {
         ctx.beginPath();
-        ctx.arc(centerPix.x, centerPix.y, r * pixelsPerNM, 0, Math.PI * 2);
-        ctx.strokeStyle = r === 10 || r === 20 ? '#1e293b' : '#141c2c';
+        ctx.arc(center.x, center.y, r * pxPerNM, 0, Math.PI * 2);
+        ctx.strokeStyle = (r === SIM.radarRangeNM || r === SIM.radarRangeNM / 2) ? '#202f48' : '#111928';
         ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
+        ctx.setLineDash([3, 4]);
         ctx.stroke();
 
-        // Distance label
-        ctx.font = '10px JetBrains Mono, monospace';
+        ctx.font = '9px JetBrains Mono, monospace';
         ctx.fillStyle = '#475569';
-        ctx.fillText(`${r} NM`, centerPix.x + 6, centerPix.y - (r * pixelsPerNM) + 3);
+        ctx.fillText(`${r} NM`, center.x + 5, center.y - (r * pxPerNM) + 3);
       }
       ctx.setLineDash([]);
       ctx.restore();
 
-      /* 2. Compass Rose Radials around VOR (Every 30 degrees) */
+      // Radials
       ctx.save();
       for (let deg = 0; deg < 360; deg += 30) {
         const rad = degToRad(deg);
-        const rMax = state.mapScaleNM * pixelsPerNM;
-        const x2 = centerPix.x + rMax * Math.sin(rad);
-        const y2 = centerPix.y - rMax * Math.cos(rad);
+        const rLen = SIM.radarRangeNM * pxPerNM;
+        const x2 = center.x + rLen * Math.sin(rad);
+        const y2 = center.y - rLen * Math.cos(rad);
 
         ctx.beginPath();
-        ctx.moveTo(centerPix.x, centerPix.y);
+        ctx.moveTo(center.x, center.y);
         ctx.lineTo(x2, y2);
-        ctx.strokeStyle = '#1a2333';
+        ctx.strokeStyle = '#0e1624';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Radial number label at outer edge
-        const labelR = (state.mapScaleNM - 2) * pixelsPerNM;
-        const lx = centerPix.x + labelR * Math.sin(rad);
-        const ly = centerPix.y - labelR * Math.cos(rad);
+        const labelR = (SIM.radarRangeNM - (SIM.radarRangeNM * 0.06)) * pxPerNM;
+        const lx = center.x + labelR * Math.sin(rad);
+        const ly = center.y - labelR * Math.cos(rad);
         ctx.font = '9px JetBrains Mono, monospace';
         ctx.fillStyle = '#334155';
         ctx.textAlign = 'center';
@@ -852,89 +1025,72 @@
       }
       ctx.restore();
 
-      /* 3. TO / FROM Quadrant Visualizer Overlay (If enabled) */
-      if (state.showSectors) {
+      // Shaded TO/FROM Sectors
+      if (SIM.showQuadrants) {
         ctx.save();
-        const obsRad = degToRad(state.obsCourse);
-        const rScope = state.mapScaleNM * pixelsPerNM;
+        const obsRad = degToRad(SIM.obsCourse);
+        const scopeR = SIM.radarRangeNM * pxPerNM;
 
-        // FROM hemisphere: Centered around selected OBS course ±90°
         ctx.beginPath();
-        ctx.arc(centerPix.x, centerPix.y, rScope, obsRad - Math.PI/2 - Math.PI/2, obsRad + Math.PI/2 - Math.PI/2, false);
-        ctx.fillStyle = 'rgba(245, 158, 11, 0.04)'; // Amber tint for FROM
+        ctx.arc(center.x, center.y, scopeR, obsRad - Math.PI, obsRad, false);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.04)';
         ctx.fill();
 
-        // TO hemisphere: Centered around reciprocal course
         ctx.beginPath();
-        ctx.arc(centerPix.x, centerPix.y, rScope, obsRad + Math.PI/2 - Math.PI/2, obsRad + 3*Math.PI/2 - Math.PI/2, false);
-        ctx.fillStyle = 'rgba(16, 185, 129, 0.04)'; // Green tint for TO
+        ctx.arc(center.x, center.y, scopeR, obsRad, obsRad + Math.PI, false);
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.04)';
         ctx.fill();
 
-        // Course Intercept Axis lines
         ctx.beginPath();
-        const ax1 = centerPix.x - rScope * Math.sin(obsRad);
-        const ay1 = centerPix.y + rScope * Math.cos(obsRad);
-        const ax2 = centerPix.x + rScope * Math.sin(obsRad);
-        const ay2 = centerPix.y - rScope * Math.cos(obsRad);
+        const ax1 = center.x - scopeR * Math.sin(obsRad);
+        const ay1 = center.y + scopeR * Math.cos(obsRad);
+        const ax2 = center.x + scopeR * Math.sin(obsRad);
+        const ay2 = center.y - scopeR * Math.cos(obsRad);
         ctx.moveTo(ax1, ay1);
         ctx.lineTo(ax2, ay2);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.6)';
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.85)';
         ctx.lineWidth = 1.5;
-        ctx.setLineDash([5, 5]);
-        ctx.stroke();
-
-        // Perpendicular borderline (Abeam line)
-        const perpRad = obsRad + Math.PI / 2;
-        ctx.beginPath();
-        ctx.moveTo(centerPix.x - rScope * Math.sin(perpRad), centerPix.y + rScope * Math.cos(perpRad));
-        ctx.lineTo(centerPix.x + rScope * Math.sin(perpRad), centerPix.y - rScope * Math.cos(perpRad));
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([2, 4]);
+        ctx.setLineDash([5, 4]);
         ctx.stroke();
         ctx.restore();
       }
 
-      /* 4. Active Radial Projection (Current aircraft radial line) */
-      const curRadial = computeCurrentRadial();
-      const curRadAngle = degToRad(curRadial);
-      const acPix = nmToCanvas(state.aircraft.x, state.aircraft.y);
-
+      // Active Radial Line
+      const acPix = nmToRadarPixel(SIM.aircraft.x, SIM.aircraft.y);
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(centerPix.x, centerPix.y);
+      ctx.moveTo(center.x, center.y);
       ctx.lineTo(acPix.x, acPix.y);
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.7)';
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.7)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
       ctx.restore();
 
-      /* 5. Flight Path Trail */
-      if (state.showTrails && state.trailHistory.length > 1) {
+      // Breadcrumb Trail
+      if (SIM.showTrail && SIM.trailPoints.length > 1) {
         ctx.save();
         ctx.beginPath();
-        const start = nmToCanvas(state.trailHistory[0].x, state.trailHistory[0].y);
-        ctx.moveTo(start.x, start.y);
-        for (let i = 1; i < state.trailHistory.length; i++) {
-          const pt = nmToCanvas(state.trailHistory[i].x, state.trailHistory[i].y);
+        const first = nmToRadarPixel(SIM.trailPoints[0].x, SIM.trailPoints[0].y);
+        ctx.moveTo(first.x, first.y);
+        for (let i = 1; i < SIM.trailPoints.length; i++) {
+          const pt = nmToRadarPixel(SIM.trailPoints[i].x, SIM.trailPoints[i].y);
           ctx.lineTo(pt.x, pt.y);
         }
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([2, 2]);
+        ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([2, 3]);
         ctx.stroke();
         ctx.restore();
       }
 
-      /* 6. VOR / DME Ground Station Icon */
+      // Station VOR Hexagon
       ctx.save();
-      // Outer hexagon for VOR
-      ctx.translate(centerPix.x, centerPix.y);
+      ctx.translate(center.x, center.y);
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
-        const angle = (i * Math.PI) / 3;
-        const x = 14 * Math.cos(angle);
-        const y = 14 * Math.sin(angle);
+        const ang = (i * Math.PI) / 3;
+        const x = 12 * Math.cos(ang);
+        const y = 12 * Math.sin(ang);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -945,509 +1101,455 @@
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Inner DME square
-      ctx.strokeRect(-6, -6, 12, 12);
+      ctx.strokeRect(-5, -5, 10, 10);
       ctx.fillStyle = '#38bdf8';
       ctx.fillRect(-2, -2, 4, 4);
 
-      // Station ID & Frequency badge
-      ctx.font = 'bold 11px JetBrains Mono, monospace';
+      const st = SIM.stations[SIM.currentStationKey];
+      ctx.font = 'bold 10px JetBrains Mono, monospace';
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'center';
-      ctx.fillText(state.vorStation.ident, 0, -18);
-      ctx.font = '9px JetBrains Mono, monospace';
+      ctx.fillText(st.id, 0, -16);
+      ctx.font = '8px JetBrains Mono, monospace';
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText(state.vorStation.freq, 0, 24);
+      ctx.fillText(st.freq, 0, 21);
       ctx.restore();
 
-      /* 7. Aircraft Icon (Drawn only if not hidden by quiz) */
-      if (state.currentMode !== 'quiz' || state.quiz.solutionRevealed) {
-        ctx.save();
-        ctx.translate(acPix.x, acPix.y);
-        ctx.rotate(degToRad(state.aircraft.heading));
+      // Aircraft Silhouette
+      ctx.save();
+      ctx.translate(acPix.x, acPix.y);
+      ctx.rotate(degToRad(SIM.aircraft.heading));
 
-        // Heading velocity vector line (predictive track for 1 minute)
-        const trackLength = (state.aircraft.speedKts / 60) * pixelsPerNM * 2;
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(0, -trackLength);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+      const trackPx = (SIM.aircraft.speedKts / 60) * 2 * pxPerNM;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(0, -trackPx);
+      ctx.strokeStyle = '#22d3ee';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-        // Stylized Jet Icon
-        ctx.beginPath();
-        ctx.moveTo(0, -16); // nose
-        ctx.lineTo(3, -6);
-        ctx.lineTo(16, 2);  // right wing
-        ctx.lineTo(16, 6);
-        ctx.lineTo(3, 4);
-        ctx.lineTo(2, 14);  // right stabilizer
-        ctx.lineTo(7, 18);
-        ctx.lineTo(7, 20);
-        ctx.lineTo(0, 18);  // tail
-        ctx.lineTo(-7, 20);
-        ctx.lineTo(-7, 18);
-        ctx.lineTo(-2, 14); // left stabilizer
-        ctx.lineTo(-3, 4);
-        ctx.lineTo(-16, 6); // left wing
-        ctx.lineTo(-16, 2);
-        ctx.lineTo(-3, -6);
-        ctx.closePath();
+      ctx.beginPath();
+      ctx.moveTo(0, -16);
+      ctx.lineTo(3, -5);
+      ctx.lineTo(16, 3);
+      ctx.lineTo(16, 7);
+      ctx.lineTo(3.5, 4);
+      ctx.lineTo(2, 14);
+      ctx.lineTo(7, 18);
+      ctx.lineTo(7, 20);
+      ctx.lineTo(0, 17);
+      ctx.lineTo(-7, 20);
+      ctx.lineTo(-7, 18);
+      ctx.lineTo(-2, 14);
+      ctx.lineTo(-3.5, 4);
+      ctx.lineTo(-16, 7);
+      ctx.lineTo(-16, 3);
+      ctx.lineTo(-3, -5);
+      ctx.closePath();
 
-        ctx.fillStyle = '#f59e0b';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-        // Drag handle ring
-        ctx.beginPath();
-        ctx.arc(0, 0, 22, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 3]);
-        ctx.stroke();
-
-        ctx.restore();
-      }
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(245, 158, 11, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
+      ctx.stroke();
+      ctx.restore();
     }
 
     function getPointerNMPosition(e) {
       const rect = canvas.getBoundingClientRect();
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const pxX = clientX - rect.left;
-      const pxY = clientY - rect.top;
-      return canvasToNM(pxX, pxY);
+      return radarPixelToNM(clientX - rect.left, clientY - rect.top);
     }
 
-    function onPointerDown(e) {
-      if (state.currentMode === 'quiz' && !state.quiz.solutionRevealed) return;
+    function onCanvasPointerDown(e) {
       const pos = getPointerNMPosition(e);
-      const distToAircraft = Math.hypot(pos.x - state.aircraft.x, pos.y - state.aircraft.y);
-      const distToStation = Math.hypot(pos.x - state.vorStation.x, pos.y - state.vorStation.y);
-
-      if (distToAircraft < 3.0) {
-        isDraggingAircraft = true;
-      } else if (distToStation < 3.0) {
-        isDraggingStation = true;
+      const distToAircraft = Math.hypot(pos.x - SIM.aircraft.x, pos.y - SIM.aircraft.y);
+      if (distToAircraft < 4.5) {
+        SIM.isDraggingPlane = true;
       }
     }
 
-    function onPointerMove(e) {
-      if (!isDraggingAircraft && !isDraggingStation) return;
+    function onCanvasPointerMove(e) {
+      if (!SIM.isDraggingPlane) return;
       const pos = getPointerNMPosition(e);
-
-      if (isDraggingAircraft) {
-        state.aircraft.x = Math.max(-state.mapScaleNM, Math.min(state.mapScaleNM, pos.x));
-        state.aircraft.y = Math.max(-state.mapScaleNM, Math.min(state.mapScaleNM, pos.y));
-        recordFlightTrail();
-      } else if (isDraggingStation) {
-        state.vorStation.x = Math.max(-state.mapScaleNM * 0.7, Math.min(state.mapScaleNM * 0.7, pos.x));
-        state.vorStation.y = Math.max(-state.mapScaleNM * 0.7, Math.min(state.mapScaleNM * 0.7, pos.y));
-      }
-
-      updateInstruments();
+      SIM.aircraft.x = Math.max(-SIM.radarRangeNM, Math.min(SIM.radarRangeNM, pos.x));
+      SIM.aircraft.y = Math.max(-SIM.radarRangeNM, Math.min(SIM.radarRangeNM, pos.y));
+      appendTrailPoint();
+      updateCockpitAvionics();
       renderAirspace();
     }
 
-    function onPointerUp() {
-      isDraggingAircraft = false;
-      isDraggingStation = false;
+    function onCanvasPointerUp() {
+      SIM.isDraggingPlane = false;
     }
 
-    canvas.addEventListener('mousedown', onPointerDown);
-    window.addEventListener('mousemove', onPointerMove);
-    window.addEventListener('mouseup', onPointerUp);
+    canvas.addEventListener('mousedown', onCanvasPointerDown);
+    window.addEventListener('mousemove', onCanvasPointerMove);
+    window.addEventListener('mouseup', onCanvasPointerUp);
 
-    canvas.addEventListener('touchstart', onPointerDown, { passive: true });
-    window.addEventListener('touchmove', onPointerMove, { passive: true });
-    window.addEventListener('touchend', onPointerUp);
+    canvas.addEventListener('touchstart', onCanvasPointerDown, { passive: true });
+    window.addEventListener('touchmove', onCanvasPointerMove, { passive: true });
+    window.addEventListener('touchend', onCanvasPointerUp);
 
-    function recordFlightTrail() {
-      if (!state.showTrails) return;
-      const last = state.trailHistory[state.trailHistory.length - 1];
-      if (!last || Math.hypot(last.x - state.aircraft.x, last.y - state.aircraft.y) > 0.3) {
-        state.trailHistory.push({ x: state.aircraft.x, y: state.aircraft.y });
-        if (state.trailHistory.length > 300) state.trailHistory.shift();
+    function appendTrailPoint() {
+      if (!SIM.showTrail) return;
+      const last = SIM.trailPoints[SIM.trailPoints.length - 1];
+      if (!last || Math.hypot(last.x - SIM.aircraft.x, last.y - SIM.aircraft.y) > 0.4) {
+        SIM.trailPoints.push({ x: SIM.aircraft.x, y: SIM.aircraft.y });
+        if (SIM.trailPoints.length > 300) SIM.trailPoints.shift();
       }
     }
 
-    function simTick(timestamp) {
-      if (!state.lastSimTickTime) state.lastSimTickTime = timestamp;
-      const dt = (timestamp - state.lastSimTickTime) / 1000; // in seconds
-      state.lastSimTickTime = timestamp;
+    // Knobs interaction
+    const obsKnob = document.getElementById('obs-knob-element');
+    const hsiCrsKnob = document.getElementById('hsi-crs-knob');
+    const hsiHdgKnob = document.getElementById('hsi-hdg-knob');
 
-      if (state.isSimRunning) {
-        // Distance traveled in this tick: (knots / 3600) * dt * multiplier
-        const distanceTraveledNM = (state.aircraft.speedKts / 3600) * dt * state.simSpeedMultiplier;
-        const hdgRad = degToRad(state.aircraft.heading);
+    obsKnob.addEventListener('mousedown', (e) => { SIM.isDraggingOBS = true; SIM.lastMouseX = e.clientX; });
+    hsiCrsKnob.addEventListener('mousedown', (e) => { SIM.isDraggingHsiCRS = true; SIM.lastMouseX = e.clientX; });
+    hsiHdgKnob.addEventListener('mousedown', (e) => { SIM.isDraggingHsiHDG = true; SIM.lastMouseX = e.clientX; });
 
-        state.aircraft.x += distanceTraveledNM * Math.sin(hdgRad);
-        state.aircraft.y += distanceTraveledNM * Math.cos(hdgRad);
+    window.addEventListener('mousemove', (e) => {
+      if (SIM.isDraggingOBS || SIM.isDraggingHsiCRS) {
+        const deltaX = e.clientX - SIM.lastMouseX;
+        if (Math.abs(deltaX) >= 2) {
+          stepOBS(deltaX > 0 ? 1 : -1);
+          SIM.lastMouseX = e.clientX;
+        }
+      } else if (SIM.isDraggingHsiHDG) {
+        const deltaX = e.clientX - SIM.lastMouseX;
+        if (Math.abs(deltaX) >= 2) {
+          stepHeadingBug(deltaX > 0 ? 1 : -1);
+          SIM.lastMouseX = e.clientX;
+        }
+      }
+    });
 
-        // Keep aircraft within sensible bounds
-        if (Math.hypot(state.aircraft.x, state.aircraft.y) > state.mapScaleNM + 5) {
-          state.aircraft.x = -state.aircraft.x * 0.9;
-          state.aircraft.y = -state.aircraft.y * 0.9;
-          state.trailHistory = [];
+    window.addEventListener('mouseup', () => {
+      SIM.isDraggingOBS = false;
+      SIM.isDraggingHsiCRS = false;
+      SIM.isDraggingHsiHDG = false;
+    });
+
+    obsKnob.addEventListener('wheel', (e) => { e.preventDefault(); stepOBS(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+    hsiCrsKnob.addEventListener('wheel', (e) => { e.preventDefault(); stepOBS(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+    hsiHdgKnob.addEventListener('wheel', (e) => { e.preventDefault(); stepHeadingBug(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+
+    function stepOBS(delta) {
+      SIM.obsCourse = normalize360(SIM.obsCourse + delta);
+      updateCockpitAvionics();
+      renderAirspace();
+    }
+
+    function stepHeadingBug(delta) {
+      SIM.headingBug = normalize360(SIM.headingBug + delta);
+      updateCockpitAvionics();
+    }
+
+    function syncHeadingBugToCurrent() {
+      SIM.headingBug = Math.round(SIM.aircraft.heading);
+      updateCockpitAvionics();
+    }
+
+    function centerCourseTO() {
+      SIM.obsCourse = Math.round(calculateBearingToStation());
+      updateCockpitAvionics();
+      renderAirspace();
+    }
+
+    function setRadialFROM() {
+      SIM.obsCourse = Math.round(calculateCurrentRadial());
+      updateCockpitAvionics();
+      renderAirspace();
+    }
+
+    function runSimulationLoop(timestamp) {
+      if (!SIM.lastTimestamp) SIM.lastTimestamp = timestamp;
+      const dt = (timestamp - SIM.lastTimestamp) / 1000;
+      SIM.lastTimestamp = timestamp;
+
+      if (SIM.isSimRunning) {
+        if (SIM.apMode === 'hdg') {
+          const turnRate = 3.0 * dt * SIM.simSpeedMultiplier;
+          let hdgDelta = normalize180(SIM.headingBug - SIM.aircraft.heading);
+          if (Math.abs(hdgDelta) <= turnRate) {
+            SIM.aircraft.heading = SIM.headingBug;
+          } else {
+            SIM.aircraft.heading = normalize360(SIM.aircraft.heading + Math.sign(hdgDelta) * turnRate);
+          }
+          syncHeadingSlider();
+        } else if (SIM.apMode === 'nav') {
+          updateAutopilotNavMode(dt);
         }
 
-        recordFlightTrail();
-        updateInstruments();
+        const distNM = (SIM.aircraft.speedKts / 3600) * dt * SIM.simSpeedMultiplier;
+        const hdgRad = degToRad(SIM.aircraft.heading);
+
+        SIM.aircraft.x += distNM * Math.sin(hdgRad);
+        SIM.aircraft.y += distNM * Math.cos(hdgRad);
+
+        if (Math.hypot(SIM.aircraft.x, SIM.aircraft.y) > SIM.radarRangeNM + 6) {
+          SIM.aircraft.x = -SIM.aircraft.x * 0.9;
+          SIM.aircraft.y = -SIM.aircraft.y * 0.9;
+          SIM.trailPoints = [];
+        }
+
+        appendTrailPoint();
+        updateCockpitAvionics();
         renderAirspace();
       }
 
-      requestAnimationFrame(simTick);
+      requestAnimationFrame(runSimulationLoop);
     }
 
-    function toggleFlightSimulation() {
-      state.isSimRunning = !state.isSimRunning;
-      const btn = document.getElementById('btn-flight-sim');
-      const icon = document.getElementById('sim-play-icon');
+    function syncHeadingSlider() {
+      document.getElementById('slider-ac-heading').value = Math.round(SIM.aircraft.heading);
+      document.getElementById('label-ac-heading').textContent = `${String(Math.round(SIM.aircraft.heading)).padStart(3, '0')}°`;
+    }
+
+    function updateAutopilotNavMode(dt) {
+      const state = computeVORInstrumentState();
+      const obs = SIM.obsCourse;
+      const interceptCorrection = Math.max(-45, Math.min(45, state.vorDeflection * 4.5));
+      const desiredHdg = normalize360(obs + interceptCorrection);
+
+      const turnRate = 3.0 * dt * SIM.simSpeedMultiplier;
+      let hdgDelta = normalize180(desiredHdg - SIM.aircraft.heading);
+
+      if (Math.abs(hdgDelta) <= turnRate) {
+        SIM.aircraft.heading = desiredHdg;
+      } else {
+        SIM.aircraft.heading = normalize360(SIM.aircraft.heading + Math.sign(hdgDelta) * turnRate);
+      }
+      syncHeadingSlider();
+    }
+
+    function toggleSimFlight() {
+      SIM.isSimRunning = !SIM.isSimRunning;
+      const btn = document.getElementById('btn-sim-play');
       const text = document.getElementById('sim-play-text');
 
-      if (state.isSimRunning) {
-        btn.className = "px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow transition flex items-center gap-1";
-        icon.className = "fa-solid fa-pause";
-        text.textContent = "Pause Sim";
+      if (SIM.isSimRunning) {
+        btn.className = "px-2.5 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold shadow-glow-amber transition flex items-center gap-1";
+        text.textContent = "Pause";
       } else {
-        btn.className = "px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition flex items-center gap-1";
-        icon.className = "fa-solid fa-play";
-        text.textContent = "Fly Plane";
+        btn.className = "px-2.5 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow-glow-emerald transition flex items-center gap-1";
+        text.textContent = "Engage";
       }
+      lucide.createIcons();
     }
 
     function cycleSimSpeed() {
       const speeds = [1, 2, 5];
-      const curIdx = speeds.indexOf(state.simSpeedMultiplier);
-      const nextIdx = (curIdx + 1) % speeds.length;
-      state.simSpeedMultiplier = speeds[nextIdx];
-      document.getElementById('btn-sim-speed').textContent = `${state.simSpeedMultiplier}x`;
+      const idx = speeds.indexOf(SIM.simSpeedMultiplier);
+      SIM.simSpeedMultiplier = speeds[(idx + 1) % speeds.length];
+      document.getElementById('btn-sim-speed').textContent = `${SIM.simSpeedMultiplier}X`;
     }
 
-    function adjustOBS(delta) {
-      state.obsCourse = normalize360(state.obsCourse + delta);
-      updateInstruments();
+    function setAutopilotMode(mode) {
+      SIM.apMode = mode;
+      document.getElementById('ap-manual').className = mode === 'manual'
+        ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold shadow transition"
+        : "px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition";
+      document.getElementById('ap-hdg').className = mode === 'hdg'
+        ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold shadow transition"
+        : "px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition";
+      document.getElementById('ap-nav').className = mode === 'nav'
+        ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold shadow transition"
+        : "px-1.5 py-0.5 rounded text-slate-400 hover:text-slate-200 transition";
+    }
+
+    function setAircraftHeading(val) {
+      SIM.aircraft.heading = parseInt(val, 10);
+      document.getElementById('label-ac-heading').textContent = `${String(SIM.aircraft.heading).padStart(3, '0')}°`;
+      updateCockpitAvionics();
       renderAirspace();
     }
 
-    function centerCDItoDirectCourse() {
-      // Center needle with TO flag (Fly direct to station)
-      state.obsCourse = computeBearingToStation();
-      updateInstruments();
-      renderAirspace();
+    function stepAircraftHeading(delta) {
+      const newHdg = normalize360(SIM.aircraft.heading + delta);
+      document.getElementById('slider-ac-heading').value = newHdg;
+      setAircraftHeading(newHdg);
     }
 
-    function setOBSToCurrentRadial() {
-      // Set OBS to current radial (FROM flag)
-      state.obsCourse = computeCurrentRadial();
-      updateInstruments();
-      renderAirspace();
+    function setAircraftSpeed(val) {
+      SIM.aircraft.speedKts = parseInt(val, 10);
+      document.getElementById('label-ac-speed').textContent = `${SIM.aircraft.speedKts} KT`;
+      updateCockpitAvionics();
     }
 
-    function onHeadingChange(val) {
-      state.aircraft.heading = parseInt(val, 10);
-      document.getElementById('val-heading').textContent = `${String(state.aircraft.heading).padStart(3, '0')}°`;
-      updateInstruments();
-      renderAirspace();
-    }
-
-    function adjustHeading(delta) {
-      const newHdg = normalize360(state.aircraft.heading + delta);
-      document.getElementById('input-heading').value = newHdg;
-      onHeadingChange(newHdg);
-    }
-
-    function onSpeedChange(val) {
-      state.aircraft.speedKts = parseInt(val, 10);
-      document.getElementById('val-speed').textContent = `${state.aircraft.speedKts} KT`;
-      updateInstruments();
-    }
-
-    function onAltitudeChange(val) {
-      state.aircraft.altitudeFt = parseInt(val, 10);
-      document.getElementById('val-altitude').textContent = `${state.aircraft.altitudeFt.toLocaleString()} FT`;
-      updateInstruments();
+    function setAircraftAltitude(val) {
+      SIM.aircraft.altitudeFt = parseInt(val, 10);
+      document.getElementById('label-ac-alt').textContent = `${SIM.aircraft.altitudeFt.toLocaleString()} FT`;
+      updateCockpitAvionics();
     }
 
     function resetAircraftPosition() {
-      state.aircraft.x = -12.0;
-      state.aircraft.y = 8.0;
-      state.aircraft.heading = 90;
-      document.getElementById('input-heading').value = 90;
-      onHeadingChange(90);
-      state.trailHistory = [];
-      updateInstruments();
+      SIM.aircraft.x = 18.0;
+      SIM.aircraft.y = -3.0;
+      SIM.aircraft.heading = 270;
+      SIM.obsCourse = 270;
+      SIM.headingBug = 270;
+      SIM.trailPoints = [];
+
+      document.getElementById('slider-ac-heading').value = 270;
+      document.getElementById('label-ac-heading').textContent = '270°';
+      updateCockpitAvionics();
       renderAirspace();
     }
 
-    function toggleSectors() {
-      state.showSectors = !state.showSectors;
-      const btn = document.getElementById('btn-toggle-sectors');
-      btn.classList.toggle('bg-sky-950', state.showSectors);
-      btn.classList.toggle('text-sky-300', state.showSectors);
-      btn.classList.toggle('border', state.showSectors);
-      btn.classList.toggle('border-sky-800', state.showSectors);
+    function setRadarRange(rangeNM) {
+      SIM.radarRangeNM = rangeNM;
+      document.getElementById('btn-zoom-15').className = rangeNM === 15 ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold transition" : "px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition";
+      document.getElementById('btn-zoom-30').className = rangeNM === 30 ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold transition" : "px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition";
+      document.getElementById('btn-zoom-60').className = rangeNM === 60 ? "px-1.5 py-0.5 rounded bg-cockpit-cyan text-slate-950 font-bold transition" : "px-1.5 py-0.5 rounded text-slate-400 hover:text-white transition";
+
+      document.getElementById('radar-range-badge').textContent = `${rangeNM} NM`;
+      document.getElementById('radar-scale-text').textContent = `${rangeNM} NM (${rangeNM <= 15 ? '3' : (rangeNM <= 30 ? '5' : '10')} NM Rings)`;
       renderAirspace();
     }
 
-    function toggleTrails() {
-      state.showTrails = !state.showTrails;
-      const btn = document.getElementById('btn-toggle-trails');
-      btn.innerHTML = `<i class="fa-solid fa-route mr-1"></i> Trail: ${state.showTrails ? 'ON' : 'OFF'}`;
-      if (!state.showTrails) state.trailHistory = [];
+    function toggleQuadrants() {
+      SIM.showQuadrants = !SIM.showQuadrants;
+      const btn = document.getElementById('btn-toggle-quadrants');
+      btn.classList.toggle('bg-cockpit-cyan/15', SIM.showQuadrants);
+      btn.classList.toggle('text-cockpit-cyan', SIM.showQuadrants);
+      btn.classList.toggle('border-cockpit-cyan/40', SIM.showQuadrants);
       renderAirspace();
     }
 
-    function loadScenario(type) {
-      state.trailHistory = [];
-      if (type === 'inbound-090') {
-        // Position east, heading west towards station on 090 radial inbound (Course 270 TO)
-        state.aircraft.x = 18;
-        state.aircraft.y = 0;
-        state.aircraft.heading = 270;
-        state.obsCourse = 270;
-      } else if (type === 'outbound-270') {
-        // Outbound along 270 radial, heading west
-        state.aircraft.x = -6;
-        state.aircraft.y = 0;
-        state.aircraft.heading = 270;
-        state.obsCourse = 270;
-      } else if (type === 'cross-radial-intercept') {
-        // Flying North at 000, intercepting the 090 radial at a 90 degree angle
-        state.aircraft.x = 14;
-        state.aircraft.y = -10;
-        state.aircraft.heading = 360;
-        state.obsCourse = 270; // Inbound course
+    function toggleTrail() {
+      SIM.showTrail = !SIM.showTrail;
+      const btn = document.getElementById('btn-toggle-trail');
+      btn.innerHTML = `<i data-lucide="route" class="w-3 h-3 inline mr-0.5"></i> Trail`;
+      btn.classList.toggle('bg-cockpit-cyan/20', SIM.showTrail);
+      if (!SIM.showTrail) SIM.trailPoints = [];
+      lucide.createIcons();
+      renderAirspace();
+    }
+
+    function onStationSelect(stationKey) {
+      SIM.currentStationKey = stationKey;
+      const st = SIM.stations[stationKey];
+      document.getElementById('dme-display-frequency').textContent = `${st.freq} MHz`;
+      updateCockpitAvionics();
+      renderAirspace();
+
+      if (SIM.isMorseActive) {
+        clearTimeout(SIM.morseTimeout);
+        playMorseSequence();
       }
-
-      document.getElementById('input-heading').value = state.aircraft.heading;
-      onHeadingChange(state.aircraft.heading);
-      updateInstruments();
-      renderAirspace();
     }
 
     function toggleMorseAudio() {
-      if (!state.audioCtx) {
-        state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (!SIM.audioCtx) {
+        SIM.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
 
-      state.isMorsePlaying = !state.isMorsePlaying;
-      const btn = document.getElementById('btn-audio-morse');
-      const icon = document.getElementById('audio-icon');
-      const status = document.getElementById('audio-status-text');
+      SIM.isMorseActive = !SIM.isMorseActive;
+      const btn = document.getElementById('btn-audio-ident');
+      const label = document.getElementById('audio-ident-label');
 
-      if (state.isMorsePlaying) {
-        if (state.audioCtx.state === 'suspended') state.audioCtx.resume();
-        btn.className = "px-2 py-0.5 rounded bg-emerald-600 text-white text-xs transition";
-        icon.className = "fa-solid fa-volume-high mr-1";
-        status.textContent = "IDENT ON";
+      if (SIM.isMorseActive) {
+        if (SIM.audioCtx.state === 'suspended') SIM.audioCtx.resume();
+        btn.className = "px-2 py-0.5 rounded bg-emerald-600 text-white transition flex items-center gap-1 text-[10px] font-mono font-bold shadow-glow-emerald";
+        label.textContent = "IDENT ON";
         playMorseSequence();
       } else {
-        btn.className = "px-2 py-0.5 rounded bg-avionics-border hover:bg-slate-700 text-slate-200 text-xs transition";
-        icon.className = "fa-solid fa-volume-xmark mr-1";
-        status.textContent = "IDENT";
-        clearTimeout(state.morseTimer);
+        btn.className = "px-2 py-0.5 rounded bg-cockpit-base border border-cockpit-border hover:border-cockpit-borderLight text-slate-300 transition flex items-center gap-1 text-[10px] font-mono font-semibold";
+        label.textContent = "IDENT";
+        clearTimeout(SIM.morseTimeout);
       }
+      lucide.createIcons();
     }
 
-    function playTone(durationSec, callback) {
-      if (!state.isMorsePlaying || !state.audioCtx) return;
+    function emitAudioTone(durationSec, onEnd) {
+      if (!SIM.isMorseActive || !SIM.audioCtx) return;
       try {
-        const osc = state.audioCtx.createOscillator();
-        const gain = state.audioCtx.createGain();
+        const osc = SIM.audioCtx.createOscillator();
+        const gain = SIM.audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(1020, state.audioCtx.currentTime); // Standard 1020 Hz FAA Morse tone
+        osc.frequency.setValueAtTime(1020, SIM.audioCtx.currentTime);
 
-        gain.gain.setValueAtTime(0, state.audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.12, state.audioCtx.currentTime + 0.01);
-        gain.gain.setValueAtTime(0.12, state.audioCtx.currentTime + durationSec - 0.01);
-        gain.gain.linearRampToValueAtTime(0, state.audioCtx.currentTime + durationSec);
+        gain.gain.setValueAtTime(0, SIM.audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.1, SIM.audioCtx.currentTime + 0.008);
+        gain.gain.setValueAtTime(0.1, SIM.audioCtx.currentTime + durationSec - 0.008);
+        gain.gain.linearRampToValueAtTime(0, SIM.audioCtx.currentTime + durationSec);
 
         osc.connect(gain);
-        gain.connect(state.audioCtx.destination);
+        gain.connect(SIM.audioCtx.destination);
         osc.start();
-        osc.stop(state.audioCtx.currentTime + durationSec);
+        osc.stop(SIM.audioCtx.currentTime + durationSec);
 
-        setTimeout(callback, durationSec * 1000);
-      } catch (e) {
-        console.error("Audio playback error", e);
+        setTimeout(onEnd, durationSec * 1000);
+      } catch (err) {
+        console.error(err);
       }
     }
 
     function playMorseSequence() {
-      if (!state.isMorsePlaying) return;
-      // Morse for 'MCN': M = '--', C = '-.-.', N = '-.'
-      const dot = 0.08;
-      const dash = 0.24;
-      const elementGap = 0.08;
-      const letterGap = 0.25;
+      if (!SIM.isMorseActive) return;
+      const st = SIM.stations[SIM.currentStationKey];
+      const morseCode = st.morse;
+      const dotTime = 0.08;
+      const dashTime = 0.24;
+      const symbolGap = 0.08;
+      const letterGap = 0.24;
+      let charIdx = 0;
 
-      const pattern = [
-        // M: - -
-        dash, dash,
-        // C: - . - .
-        dash, dot, dash, dot,
-        // N: - .
-        dash, dot
-      ];
-      let pIdx = 0;
-
-      function step() {
-        if (!state.isMorsePlaying) return;
-        if (pIdx >= pattern.length) {
-          // Pause between idents (approx 5 sec)
-          state.morseTimer = setTimeout(() => {
-            pIdx = 0;
-            step();
-          }, 4000);
+      function nextSymbol() {
+        if (!SIM.isMorseActive) return;
+        if (charIdx >= morseCode.length) {
+          SIM.morseTimeout = setTimeout(() => {
+            charIdx = 0;
+            nextSymbol();
+          }, 4500);
           return;
         }
 
-        const dur = pattern[pIdx];
-        pIdx++;
-        playTone(dur, () => {
-          state.morseTimer = setTimeout(step, (pIdx % 3 === 0 ? letterGap : elementGap) * 1000);
-        });
-      }
-      step();
-    }
-
-    function switchMode(mode) {
-      state.currentMode = mode;
-      
-      // Update Navigation Buttons
-      document.getElementById('btn-mode-explore').className = mode === 'explore' 
-        ? "px-3 py-1.5 rounded-md bg-sky-600 text-white shadow transition-all flex items-center gap-1.5"
-        : "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
-      document.getElementById('btn-mode-quiz').className = mode === 'quiz'
-        ? "px-3 py-1.5 rounded-md bg-sky-600 text-white shadow transition-all flex items-center gap-1.5"
-        : "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
-      document.getElementById('btn-mode-guide').className = mode === 'guide'
-        ? "px-3 py-1.5 rounded-md bg-sky-600 text-white shadow transition-all flex items-center gap-1.5"
-        : "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
-
-      // Panel Visibilities
-      document.getElementById('quiz-panel').classList.toggle('hidden', mode !== 'quiz');
-      document.getElementById('guide-panel').classList.toggle('hidden', mode !== 'guide');
-      document.getElementById('quiz-hidden-overlay').classList.toggle('hidden', mode !== 'quiz');
-
-      if (mode === 'quiz') {
-        state.isSimRunning = false;
-        generateNewQuizQuestion();
-      } else {
-        state.quiz.solutionRevealed = false;
-      }
-      renderAirspace();
-    }
-
-    function generateNewQuizQuestion() {
-      state.quiz.solutionRevealed = false;
-      document.getElementById('quiz-hidden-overlay').classList.remove('hidden');
-      const feedback = document.getElementById('quiz-feedback');
-      feedback.classList.add('hidden');
-
-      // Randomize aircraft position (5 to 22 NM from station, random angle)
-      const randomRadial = Math.floor(Math.random() * 36) * 10; // multiple of 10°
-      const randomDist = 7 + Math.random() * 15;
-      const rad = degToRad(randomRadial);
-
-      state.aircraft.x = randomDist * Math.sin(rad);
-      state.aircraft.y = randomDist * Math.cos(rad);
-      state.aircraft.heading = Math.floor(Math.random() * 36) * 10;
-
-      // Select random question style:
-      // 1: Center needle with FROM flag -> what radial are we on?
-      // 2: Which quadrant/hemisphere?
-      const qType = Math.random() > 0.5 ? 'radial' : 'inbound-course';
-
-      if (qType === 'radial') {
-        // Dial OBS to the current radial so needle is centered with FROM
-        state.obsCourse = randomRadial;
-        document.getElementById('quiz-question-type').textContent = "Challenge: Radial Identification";
-        document.getElementById('quiz-question-text').textContent = 
-          `Your VOR CDI needle is centered with a FROM flag and OBS dialed to ${String(state.obsCourse).padStart(3, '0')}°. What radial are you on?`;
-
-        const correctAns = `${String(randomRadial).padStart(3, '0')}° Radial`;
-        const distractors = [
-          `${String(normalize360(randomRadial + 180)).padStart(3, '0')}° Radial`,
-          `${String(normalize360(randomRadial + 90)).padStart(3, '0')}° Radial`,
-          `${String(normalize360(randomRadial - 90)).padStart(3, '0')}° Radial`
-        ];
-        renderQuizButtons(correctAns, distractors, "Remember: Radials always radiate FROM the station. With a centered needle and a FROM flag, your radial is directly on top of the OBS selector.");
-      } else {
-        // Inbound heading challenge: needle centered with TO
-        const inboundCourse = normalize360(randomRadial + 180);
-        state.obsCourse = inboundCourse;
-        document.getElementById('quiz-question-type').textContent = "Challenge: Inbound Course to Station";
-        document.getElementById('quiz-question-text').textContent = 
-          `The CDI needle is centered with a TO flag, dialed to course ${String(state.obsCourse).padStart(3, '0')}°. What magnetic heading will fly direct to the station?`;
-
-        const correctAns = `${String(inboundCourse).padStart(3, '0')}°`;
-        const distractors = [
-          `${String(randomRadial).padStart(3, '0')}°`,
-          `${String(normalize360(inboundCourse + 45)).padStart(3, '0')}°`,
-          `${String(normalize360(inboundCourse - 90)).padStart(3, '0')}°`
-        ];
-        renderQuizButtons(correctAns, distractors, `To fly direct to the station, turn to the centered TO course: ${inboundCourse}°.`);
+        const sym = morseCode[charIdx++];
+        if (sym === '.') {
+          emitAudioTone(dotTime, () => {
+            SIM.morseTimeout = setTimeout(nextSymbol, symbolGap * 1000);
+          });
+        } else if (sym === '-') {
+          emitAudioTone(dashTime, () => {
+            SIM.morseTimeout = setTimeout(nextSymbol, symbolGap * 1000);
+          });
+        } else if (sym === ' ') {
+          SIM.morseTimeout = setTimeout(nextSymbol, letterGap * 1000);
+        }
       }
 
-      updateInstruments();
-      renderAirspace();
+      nextSymbol();
     }
 
-    function renderQuizButtons(correct, distractors, explanation) {
-      const container = document.getElementById('quiz-options-container');
-      container.innerHTML = '';
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.key === 'ArrowLeft') stepAircraftHeading(-5);
+      else if (e.key === 'ArrowRight') stepAircraftHeading(5);
+      else if (e.key === '[' || e.key === '{') stepOBS(-1);
+      else if (e.key === ']' || e.key === '}') stepOBS(1);
+      else if (e.key === 'h' || e.key === 'H') switchInstrumentMode(SIM.activeInstrument === 'vor' ? 'hsi' : 'vor');
+      else if (e.key === ' ') { e.preventDefault(); toggleSimFlight(); }
+    });
 
-      const choices = [correct, ...distractors].sort(() => Math.random() - 0.5);
-
-      choices.forEach(choice => {
-        const btn = document.createElement('button');
-        btn.className = "p-2.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-center transition";
-        btn.textContent = choice;
-        btn.onclick = () => handleQuizAnswer(choice, correct, explanation, btn);
-        container.appendChild(btn);
-      });
-    }
-
-    function handleQuizAnswer(selected, correct, explanation, btnElem) {
-      state.quiz.total++;
-      const isCorrect = selected === correct;
-      if (isCorrect) state.quiz.score++;
-
-      document.getElementById('quiz-score').textContent = state.quiz.score;
-      document.getElementById('quiz-total').textContent = state.quiz.total;
-
-      const feedback = document.getElementById('quiz-feedback');
-      feedback.classList.remove('hidden');
-
-      if (isCorrect) {
-        feedback.className = "mt-3 p-2.5 rounded text-xs leading-relaxed bg-emerald-950/70 border border-emerald-600/70 text-emerald-200";
-        feedback.innerHTML = `<b class="flex items-center gap-1 mb-1"><i class="fa-solid fa-circle-check"></i> CORRECT!</b> ${explanation}`;
-      } else {
-        feedback.className = "mt-3 p-2.5 rounded text-xs leading-relaxed bg-rose-950/70 border border-rose-600/70 text-rose-200";
-        feedback.innerHTML = `<b class="flex items-center gap-1 mb-1"><i class="fa-solid fa-circle-xmark"></i> INCORRECT</b> The correct answer was <b>${correct}</b>. ${explanation}`;
-      }
-
-      revealAircraftSolution();
-    }
-
-    function revealAircraftSolution() {
-      state.quiz.solutionRevealed = true;
-      document.getElementById('quiz-hidden-overlay').classList.add('hidden');
-      renderAirspace();
-    }
-
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', () => { resizeRadarCanvas(); });
 
     window.onload = function() {
-      initializeAzimuthCard();
-      resizeCanvas();
-      updateInstruments();
-      requestAnimationFrame(simTick);
+      initializeInstrumentDialsStatic();
+      resizeRadarCanvas();
+      updateCockpitAvionics();
+      lucide.createIcons();
+      requestAnimationFrame(runSimulationLoop);
     };
   </script>
 </body>
